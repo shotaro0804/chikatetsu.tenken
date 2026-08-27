@@ -232,60 +232,71 @@ input::placeholder{color:#BEBAAE}
 .tip b{color:var(--hi-dim);font-weight:700}
 .tip.item{margin:0 0 14px}
 
-/* ===== 総括（アプリの中で報告書を確認する） ===== */
-.rep .rhead{border:1px solid var(--line2);border-radius:8px;padding:11px 12px;background:var(--surface);margin-bottom:12px}
-.rep .rttl{font-size:15px;font-weight:700;letter-spacing:.02em;line-height:1.4}
-.rep .rmeta{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:6px;line-height:1.8}
-.rep .rmeta b{color:var(--ink);font-weight:700}
-.rep h3{margin:17px 0 6px;font-size:11.5px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
-.rep h3:first-of-type{margin-top:4px}
-.rtbl{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);
-  border-radius:8px;overflow:hidden;background:var(--white);table-layout:fixed}
-.rtbl td,.rtbl th{padding:5px 6px;border-bottom:1px solid var(--line);font-size:12px;
-  text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rtbl th{background:var(--bg);color:var(--muted);font-weight:700;font-size:10px;letter-spacing:.03em}
-.rtbl td.l,.rtbl th.l{text-align:left;white-space:normal}
-.rtbl td.sy{font-family:var(--mono);font-weight:700;font-size:11.5px}
-.rtbl .nm{font-size:10px;color:var(--muted);white-space:normal;line-height:1.35;
-  overflow-wrap:anywhere}
-.rtbl td.v{font-family:var(--mono);font-weight:700}
-.rtbl td.std{font-family:var(--mono);font-weight:400;color:var(--muted);font-size:11px}
-.rtbl td.miss{color:var(--fault);font-weight:700}
-.rtbl td.warn{color:var(--warn)}
-.rtbl td.fault{color:var(--fault)}
-.rtbl tr:last-child td{border-bottom:0}
-.rtbl tr.pan td{background:#FBFAF6}
-.rtbl tr.pan td.sy{font-size:10.5px;color:var(--muted);font-family:var(--jp);white-space:normal;line-height:1.35}
-.rep .rmk{border:1px solid var(--line);border-radius:8px;background:var(--white);
-  padding:9px 11px;font-size:12.5px;line-height:1.7;white-space:pre-wrap}
-.rep .repnote{font-size:11.5px;line-height:1.6;color:var(--muted);margin-top:7px}
+/* ===== 総括（Excel「姪浜総括」と同じ並び。A4横1ページ） ===== */
+/* 列幅・行高・結合はExcelの実測値。Excel側は A4横・81%・上下左右中央で組まれている */
+.rep .repnote{font-size:11.5px;line-height:1.6;color:var(--muted);margin-top:8px}
 .repwarn{border:1.5px solid var(--warn);background:#FDF6EA;border-radius:8px;
-  padding:9px 11px;font-size:12.5px;line-height:1.7;margin-bottom:11px}
+  padding:9px 11px;font-size:12.5px;line-height:1.7;margin-bottom:10px}
 .repwarn b{color:var(--warn);font-weight:700}
 .repbad{border-color:var(--fault);background:#FBEDEB}
 .repbad b{color:var(--fault)}
 .repok{border:1px solid #BFE6D2;background:#F2FBF6;border-radius:8px;padding:9px 11px;
-  font-size:12.5px;color:#0E7C4A;font-weight:700;margin-bottom:11px}
+  font-size:12.5px;color:#0E7C4A;font-weight:700;margin-bottom:10px}
 .prbtn{position:absolute;top:12px;right:52px;height:34px;padding:0 12px;border-radius:8px;
   border:1.5px dotted var(--ink);background:var(--white);color:var(--ink);
   font-size:12.5px;font-weight:700;line-height:1;white-space:nowrap}
+.panel.xlwide{max-width:min(98vw,1120px)}
+.shwrap{overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch;
+  border:1px solid var(--line);border-radius:8px;background:var(--white)}
+.sheet{width:277mm;padding:4mm 3mm;background:var(--white)}
+table.xl{width:100%;border-collapse:collapse;table-layout:fixed;
+  font-family:var(--jp);font-size:8pt;color:var(--ink)}
+table.xl td{border:.5pt solid #D3CFC2;padding:0 1.1mm;white-space:nowrap;
+  overflow:hidden;line-height:1.15;vertical-align:middle}
+/* 見出し */
+table.xl td.hd{background:#F0EEE6;color:#6C6A62;font-size:7pt;font-weight:700;text-align:center;
+  letter-spacing:.02em}
+table.xl td.band{background:#E8E3D7;color:var(--ink);font-size:8pt;font-weight:700;
+  text-align:center;letter-spacing:.06em}
+/* 帳票の外（表題・年度・点検日・No.） */
+table.xl td.ttl{border:0;font-size:11.5pt;font-weight:700;letter-spacing:.01em}
+table.xl td.mlab{border:0;font-size:7.5pt;color:#6C6A62;text-align:right;padding-right:1.5mm}
+table.xl td.mval{border:0;font-family:var(--mono);font-size:10pt;font-weight:700;text-align:left}
+table.xl td.mval.c{text-align:center}
+/* 本文 */
+table.xl td.sy{font-size:8pt;font-weight:700;padding:0 .3mm;text-align:justify;text-align-last:justify;
+  -webkit-text-align-last:justify}
+table.xl td.sy.s10{font-size:7.3pt}   /* ＰＡＣ－７１ など（Excel 10pt） */
+table.xl td.sy.s9{font-size:6.5pt}    /* ＭＡＣ－２１（Excel 9pt） */
+table.xl td.nm{font-size:8pt}
+table.xl td.n{font-family:var(--mono);font-size:8.5pt;font-weight:700;text-align:right;
+  font-variant-numeric:tabular-nums}
+table.xl td.std{font-family:var(--mono);font-size:8pt;font-weight:400;color:#9C9788;text-align:right}
+table.xl td.ctr{text-align:center}
+table.xl td.rmk{font-size:8pt;text-align:left}
+table.xl td.hd.rmk{font-size:6.5pt;text-align:left}  /* 冷媒圧力の名称（Excel 9pt） */
+table.xl td.miss{color:var(--fault)}
+table.xl td.warn{color:var(--warn)}
+table.xl td.fault{color:var(--fault)}
+table.xl td.void{border:0;background:transparent}
+.swipe2{font-size:11.5px;color:var(--muted);margin-bottom:6px}
 
-/* ===== 印刷（総括をA4で出す） ===== */
+/* ===== 印刷（総括をA4横1ページで出す） ===== */
 @media print{
-  @page{size:A4 portrait;margin:11mm}
+  @page{size:A4 landscape;margin:8mm}
   html,body{background:#fff !important}
+  /* openPop が body に付ける overflow:hidden / height を印刷時だけ戻す */
+  body{overflow:visible !important;height:auto !important}
   body::before{display:none}
   #app,.bottom{display:none !important}
   .pop{position:static;display:block;background:none;padding:0;overscroll-behavior:auto}
-  .panel{max-width:none;max-height:none;overflow:visible;box-shadow:none;
-    border-radius:0;animation:none;width:100%}
-  .phead{position:static;border-bottom:1px solid #999;border-radius:0}
-  .phead .x,.prbtn,.pfoot,.repnote{display:none !important}
+  .panel,.panel.xlwide{max-width:none;max-height:none;overflow:visible;box-shadow:none;
+    border-radius:0;animation:none;width:auto}
+  .phead,.pfoot,.prbtn,.phead .x,.swipe2,.repnote,.repwarn,.repok{display:none !important}
   .pbody{padding:0}
-  .rep .rhead{background:#fff}
-  .rtbl{page-break-inside:auto}
-  .rtbl tr{page-break-inside:avoid}
-  .rep h3{page-break-after:avoid}
+  .shwrap{overflow:visible;border:0;border-radius:0;background:none}
+  .sheet{width:auto;padding:0}
+  table.xl{page-break-inside:avoid}
 }
 
 /* ===== チェックボックス ===== */
@@ -612,6 +623,7 @@ function draw(){
 
 /* ============ ポップアップ ============ */
 function openPop(node,wide){
+  $("#panel").classList.remove("xlwide");
   $("#panel").innerHTML="";$("#panel").appendChild(node);
   $("#panel").classList.toggle("wide",!!wide);
   $("#pop").classList.add("show");$("#app").classList.add("blurred");
@@ -1248,93 +1260,87 @@ FS動作確認　${g("dpan.fs")||"未選択"}
   openPop(frag);
 }
 
-/* ============ 総括（アプリの中で報告書のかたちにして確認する） ============ */
+/* ============ 総括（Excel「姪浜総括」と同じ並びで出す） ============ */
 /* 「定格」は総括シートF列の値。現場用シートの「基準値」とは別の数字なので混ぜない */
 const RATED={mac21:85,sf21:3,ef21:1.6,sf31:7.5,ef31:7.5,ac41:50.3,
              pac71:15.1,pac73:15.1,pac72:15.1,pac74:15.1,tp:5.5,sf:1.2,ef:1.2};
-/* 総括の機器行（点検表の並び）。末尾は電流を測るかどうか */
-const REP_M=[
-  ["mac21","ＭＡＣ－２１","駅務室系統空調機",1],
-  ["sf21","ＳＦ－２１","駅務室系統送風機",1],
-  ["ef21","ＥＦ－２１","駅務室系統排風機",1],
-  ["sf31","ＳＦ－３１","電気室送風機",1],
-  ["ef31","ＥＦ－３１","電気室排風機",1],
-  ["ac41","ＡＣ－４１","信通機器室空調機",1],
-  ["pac71","ＰＡＣ－７１","ﾎｰﾑｽﾎﾟｯﾄ空調機 1・2番A側",0],
-  ["pac73","ＰＡＣ－７３","ﾎｰﾑｽﾎﾟｯﾄ空調機 1・2番B側",0],
-  ["pac72","ＰＡＣ－７２","ﾎｰﾑｽﾎﾟｯﾄ空調機 3・4番A側",0],
-  ["pac74","ＰＡＣ－７４","ﾎｰﾑｽﾎﾟｯﾄ空調機 3・4番B側",0],
-  ["tp","ＴＰ","排水ﾎﾟﾝﾌﾟ",1],
-  ["sf","ＳＦ","ﾎﾟﾝﾌﾟ室系統給気ﾌｧﾝ",1],
-  ["ef","ＥＦ","ﾎﾟﾝﾌﾟ室系統排気ﾌｧﾝ",1]
+/* 帳票の左側 r7〜r26。Excelの行順そのまま */
+const XL_ROWS=[
+ {b:"Ｐ－1",       nm:"動力制御盤",                    volt:"p1"},
+ {b:"Ｐ－３",       nm:"動力制御盤",                    volt:"p3"},
+ {b:"Ｐ－４",       nm:"動力制御盤"},
+ {b:"ＭＡＣ－２１", nm:"駅務室系統空調機",              id:"mac21"},
+ {b:"ＳＦ－２１",   nm:"駅務室系統送風機",              id:"sf21"},
+ {b:"ＥＦ－２１",   nm:"駅務室系統排風機",              id:"ef21"},
+ {b:"",             nm:"電気室換気装置動力制御盤",      volt:"dkan"},
+ {b:"ＳＦ－３１",   nm:"電気室送風機",                  id:"sf31"},
+ {b:"ＥＦ－３１",   nm:"電気室排風機",                  id:"ef31"},
+ {b:"Ｐ－５",       nm:"動力制御盤",                    volt:"p5"},
+ {b:"ＡＣ－４１",   nm:"信通機器室空調機　",            id:"ac41"},
+ {b:"ＰＡＣ－７１", nm:"ﾎｰﾑｽﾎﾟｯﾄ空調機(1・2番ﾎｰﾑA側)", id:"pac71",noA:1,temp:"temp.t12"},
+ {b:"ＰＡＣ－７３", nm:"ﾎｰﾑｽﾎﾟｯﾄ空調機(1・2番ﾎｰﾑB側)", id:"pac73",noA:1},
+ {b:"ＰＡＣ－７２", nm:"ﾎｰﾑｽﾎﾟｯﾄ空調機(3・4番ﾎｰﾑA側)", id:"pac72",noA:1,temp:"temp.t34"},
+ {b:"ＰＡＣ－７４", nm:"ﾎｰﾑｽﾎﾟｯﾄ空調機(3・4番ﾎｰﾑB側)", id:"pac74",noA:1},
+ {b:"",             nm:"排水ﾎﾟﾝﾌﾟ動力制御盤",           volt1:"dpan.v"},
+ {b:"ＴＰ",         nm:"排水ﾎﾟﾝﾌﾟ",                     id:"tp"},
+ {b:"ＳＦ",         nm:"ﾎﾟﾝﾌﾟ室系統給気ﾌｧﾝ",            id:"sf"},
+ {b:"ＥＦ",         nm:"ﾎﾟﾝﾌﾟ室系統排気ﾌｧﾝ",            id:"ef",fs:1},
+ {b:"",             nm:"消火栓ﾎﾟﾝﾌﾟ動力制御盤",         volt:"kasen"}
 ];
-const REP_P=[
-  ["p1","Ｐ－1　動力制御盤",3],
-  ["p3","Ｐ－３　動力制御盤",3],
-  ["dkan","電気室換気装置動力制御盤",3],
-  ["p5","Ｐ－５　動力制御盤",3],
-  ["dpan","排水ﾎﾟﾝﾌﾟ動力制御盤（単相）",1],
-  ["kasen","消火栓ﾎﾟﾝﾌﾟ動力制御盤",3]
+/* 帳票の右側：各動力盤 積算電力量（総括 L11〜L16） */
+const XL_KW=[
+ ["kw1","駅務室系統空調機・室内機等"],
+ ["kw2","駅務室系統送風機・排風機・ﾌｨﾙﾀｰ"],
+ ["kw3","電気室換気装置動力制御盤　主幹"],
+ ["kw4","信通機器室動力制御盤　主幹"],
+ ["kw5","排水ﾎﾟﾝﾌﾟ室　主幹"],
+ ["kw6","排水ﾎﾟﾝﾌﾟ　　TP"]
 ];
-const REP_KW=[
-  ["kw1","駅務室系統空調機・室内機等"],
-  ["kw2","駅務室系統送風機・排風機・ﾌｨﾙﾀｰ"],
-  ["kw3","電気室換気装置動力制御盤　主幹"],
-  ["kw4","信通機器室動力制御盤　主幹"],
-  ["kw5","排水ﾎﾟﾝﾌﾟ室　主幹"],
-  ["kw6","排水ﾎﾟﾝﾌﾟ　ＴＰ"]
-];
-const REP_PR=[["prs1","ＭＡＣ－２１－０ ①"],["prs2","ＭＡＣ－２１－０ ②"],["prs3","ＡＣ－４１"]];
+/* Excelの列幅（B〜S）。合計164.31を100%に割る */
+const XL_W=[9,9,20.25,7.63,7.63,9.75,8.13,8.13,8.13,1.88,9,8.38,9.75,8.13,11.63,8.13,11.63,8.13];
 
 const gvn=k=>{const v=val[k];return(v===undefined||v==="")?null:nz(v);};
 const scls=k=>stat[k]==="fault"?"fault":stat[k]==="warn"?"warn":"";
-const d1=v=>(v===null||v===undefined)?"—":(Math.round(v*10)/10).toFixed(1);
-const d2=v=>(v===null||v===undefined)?"—":(Math.round(v*100)/100).toFixed(2);
-const dI=v=>(v===null||v===undefined)?"—":Math.round(v).toLocaleString();
+const d1=v=>(v===null||v===undefined)?"":(Math.round(v*10)/10).toFixed(1);
+const d2=v=>(v===null||v===undefined)?"":(Math.round(v*100)/100).toFixed(2);
+const dI=v=>(v===null||v===undefined)?"":Math.round(v).toLocaleString();
 /* 総括の「運転時間」「使用量」は前回からの差。Excel側は蓄積シートの引き算で出している */
 function diffOf(k){
   const a=gvn(k),f=fieldByKey(k);
   if(a===null||!f||typeof f.prev!=="number")return null;
   return Math.round((a-f.prev)*10)/10;
 }
-function rcell(k,txt){
-  if(!has(k))return '<td class="v miss">—</td>';
-  return '<td class="v '+scls(k)+'">'+txt+'</td>';
-}
 function nendo(ds){
   const p=String(ds||"").split("-").map(Number);
-  if(!p[0])return "";
-  return "令和"+((p[1]>=4?p[0]:p[0]-1)-2018)+"年度";
+  return p[0]?"令和"+((p[1]>=4?p[0]:p[0]-1)-2018)+"年度":"";
 }
 function jdate(ds){
   const p=String(ds||"").split("-").map(Number);
-  return p[0]?p[0]+"年"+p[1]+"月"+p[2]+"日":"—";
+  return p[0]?p[0]+"年"+p[1]+"月"+p[2]+"日":"";
 }
 function mdOf(ds){
   const p=String(ds||"").split("-").map(Number);
-  return p[0]?p[1]+"/"+p[2]:"—";
+  return p[0]?p[1]+"/"+p[2]:"";
 }
+/* 値セル。未入力は赤、注意・要確認は色を変える */
+function xc(k,txt,cls){
+  if(!has(k))return '<td class="n miss">—</td>';
+  return '<td class="n '+(cls||"")+" "+scls(k)+'">'+txt+'</td>';
+}
+const xe=n=>'<td'+(n>1?' colspan="'+n+'"':'')+'></td>';
+const xv=n=>'<td class="void"'+(n>1?' colspan="'+n+'"':'')+'></td>';
 
 function openSummary(){
   const frag=document.createDocumentFragment();
   const head=el("div","phead",
-    '<div class="sym">総括</div><div class="nm">Excelの「姪浜総括」と同じ中身です</div>');
+    '<div class="sym">総括</div><div class="nm">Excel「姪浜総括」と同じ並び／A4横1ページ</div>');
   const pr=el("button","prbtn","印刷");pr.type="button";
   pr.onclick=()=>window.print();head.appendChild(pr);
   const x=el("button","x","×");x.onclick=closePop;head.appendChild(x);
   frag.appendChild(head);
-
   const body=el("div","pbody rep");
-  const prevD=String((HIST[HIST.length-1]||{}).d||"—").replace(/^0/,"").replace("/0","/");
 
-  /* --- 見出し --- */
-  body.insertAdjacentHTML("beforeend",
-    '<div class="rhead"><div class="rttl">姪浜駅 空調衛生設備点検報告書</div>'+
-    '<div class="rmeta">'+nendo(info.date)+'　No.<b>'+info.no+'</b><br>'+
-    '点検日 <b>'+jdate(info.date)+' '+info.time+'</b><br>'+
-    '点検者 <b>'+(info.whoA||"—")+'</b> ／ <b>'+(info.whoB||"—")+'</b></div></div>');
-
-  /* --- 未入力・注意のまとめ --- */
+  /* --- 未入力・注意のまとめ（帳票の外。確認のために足したもの） --- */
   const missing=keys.filter(k=>!has(k));
   const issues=[];
   ITEMS.forEach(it=>it.f.forEach(f=>{
@@ -1343,93 +1349,126 @@ function openSummary(){
     else if(stat[k]==="warn")issues.push("注意　"+it.sym+" "+f.lab);
   }));
   const uniq=[...new Set(issues)];
-  if(missing.length){
-    body.insertAdjacentHTML("beforeend",
-      '<div class="repwarn repbad"><b>未入力が '+missing.length+' 項目あります。</b><br>'+
-      missing.map(labelOf).join("／")+'</div>');
-  }
-  if(uniq.length){
-    body.insertAdjacentHTML("beforeend",
-      '<div class="repwarn"><b>確認したい値が '+uniq.length+' 件あります。</b><br>'+
-      uniq.join("<br>")+'</div>');
-  }
-  if(!missing.length&&!uniq.length){
-    body.insertAdjacentHTML("beforeend",
-      '<div class="repok">未入力なし。基準値・前回比の警告もありません。</div>');
-  }
+  if(missing.length)body.insertAdjacentHTML("beforeend",
+    '<div class="repwarn repbad"><b>未入力が '+missing.length+' 項目あります。</b><br>'+
+    missing.map(labelOf).join("／")+'</div>');
+  if(uniq.length)body.insertAdjacentHTML("beforeend",
+    '<div class="repwarn"><b>確認したい値が '+uniq.length+' 件あります。</b><br>'+uniq.join("<br>")+'</div>');
+  if(!missing.length&&!uniq.length)body.insertAdjacentHTML("beforeend",
+    '<div class="repok">未入力なし。基準値・前回比の警告もありません。</div>');
+  body.insertAdjacentHTML("beforeend",
+    '<div class="swipe2">帳票を横になぞると右側（冷媒圧力・積算電力量・備考）が見られます。印刷はA4横1ページです。</div>');
 
-  /* --- 機器：電流・定格・運転時間 --- */
-  let h='<h3>電流（A）／運転時間（H）</h3><table class="rtbl">'+
-    '<colgroup><col style="width:39%"><col style="width:19%"><col style="width:19%"><col style="width:23%"></colgroup>'+
-    '<tr><th class="l">記号・名称</th><th>電流</th><th>定格</th><th>運転時間</th></tr>';
-  REP_M.forEach(([id,sym,nm,hasA])=>{
-    h+='<tr><td class="l sy">'+symHTML(sym)+'<div class="nm">'+nm+'</div></td>';
-    h+=hasA?rcell(id+".a",d1(gvn(id+".a"))):'<td class="std">—</td>';
-    h+='<td class="std">'+d1(RATED[id])+'</td>';
-    h+=rcell(id+".h",d1(diffOf(id+".h")))+'</tr>';
+  /* --- 帳票 --- */
+  const tw=XL_W.reduce((a,b)=>a+b,0);
+  let h='<div class="shwrap"><div class="sheet"><table class="xl"><colgroup>'+
+    XL_W.map(w=>'<col style="width:'+(w/tw*100).toFixed(3)+'%">').join("")+'</colgroup><tbody>';
+  const tr=(mm,inner)=>{h+='<tr style="height:'+mm+'mm">'+inner+'</tr>';};
+
+  /* r2 表題・年度・点検日・No. */
+  tr(6.4,
+    '<td class="ttl" colspan="7">姪浜駅 空調衛生設備点検報告書</td>'+
+    '<td class="mval c">'+nendo(info.date).replace("年度","")+'</td>'+
+    '<td class="mlab">年度</td>'+xv(1)+
+    '<td class="mlab">点検日</td>'+
+    '<td class="mval" colspan="2">'+(jdate(info.date)||"—")+'</td>'+
+    '<td class="mlab">時</td>'+
+    '<td class="mval">'+(info.time||"—")+'</td>'+xv(1)+
+    '<td class="mlab">No.</td>'+
+    '<td class="mval">'+(info.no||"—")+'</td>');
+  /* r3 点検者（Excelでは空き行。ここに点検者を入れている） */
+  tr(6.0,'<td class="mlab" colspan="2">点検者</td>'+
+    '<td class="mval" colspan="5">'+(info.whoA||"—")+"　／　"+(info.whoB||"—")+'</td>'+xv(11));
+
+  /* r4〜r6 見出し */
+  tr(4.9,'<td class="hd" colspan="3" rowspan="2">点　検　項　目</td>'+
+    '<td class="hd" colspan="2">動　力　盤</td>'+
+    '<td class="hd" rowspan="2">運転時間</td>'+
+    xe(1)+'<td class="hd">電　圧</td>'+xe(1)+xv(1)+
+    '<td class="hd" colspan="4">名　称</td>'+
+    '<td class="hd">高圧基準値</td><td class="hd">測定値</td>'+
+    '<td class="hd">低圧基準値</td><td class="hd">測定値</td>');
+  tr(4.9,'<td class="hd" colspan="2">電流　（A）</td>'+
+    xe(1)+'<td class="hd">（V）</td>'+xe(1)+xv(1)+
+    '<td class="hd rmk" colspan="3" rowspan="2">ＭＡＣ－２１－０ 冷媒圧力</td>'+
+    '<td class="hd" rowspan="3">Ｍｐａ</td>'+
+    '<td class="std" rowspan="3">2.62～3.39</td>'+
+    xc("prs1.h",d2(gvn("prs1.h")))+
+    '<td class="std" rowspan="3">0.60～0.98</td>'+
+    xc("prs1.l",d2(gvn("prs1.l"))));
+  tr(4.9,'<td class="hd">記　号</td><td class="hd" colspan="2">名　称</td>'+
+    '<td class="hd">測定値</td><td class="hd">定　格</td><td class="hd">(H)</td>'+
+    '<td class="hd">RS</td><td class="hd">ST</td><td class="hd">TR</td>'+xv(1)+
+    xc("prs2.h",d2(gvn("prs2.h")))+xc("prs2.l",d2(gvn("prs2.l"))));
+
+  /* r7〜r26 本文 */
+  const RIGHT=[];
+  RIGHT[0]='<td class="hd rmk" colspan="3">ＡＣ－４１　冷媒圧力</td>'+
+           xc("prs3.h",d2(gvn("prs3.h")))+xc("prs3.l",d2(gvn("prs3.l")));
+  RIGHT[1]=xv(8);
+  RIGHT[2]='<td class="band" colspan="8">各動力盤積算電力量　(ｋＷｈ)</td>';
+  RIGHT[3]='<td class="hd" colspan="6">名称</td><td class="hd" colspan="2">使用量</td>';
+  XL_KW.forEach(([id,nm],i)=>{
+    const k=id+".v";
+    const cell=has(k)
+      ? '<td class="n '+scls(k)+'" colspan="2">'+dI(diffOf(k))+'</td>'
+      : '<td class="n miss" colspan="2">—</td>';
+    RIGHT[4+i]='<td class="rmk" colspan="6">'+nm+'</td>'+cell;
   });
-  h+='</table><div class="repnote">運転時間は「今回の積算時間 − 前回の積算時間」。'+
-     '定格は総括シートの値です（入力画面の基準値とは別の数字）。</div>';
-
-  /* --- 動力盤の電圧 --- */
-  h+='<h3>動力盤 電圧（V）</h3><table class="rtbl">'+
-    '<colgroup><col style="width:46%"><col style="width:18%"><col style="width:18%"><col style="width:18%"></colgroup>'+
-    '<tr><th class="l">名称</th><th>RS</th><th>ST</th><th>TR</th></tr>';
-  REP_P.forEach(([id,nm,n])=>{
-    h+='<tr class="pan"><td class="l sy">'+nm+'</td>';
-    if(n===3){
-      h+=rcell(id+".rs",dI(gvn(id+".rs")))+rcell(id+".st",dI(gvn(id+".st")))+rcell(id+".tr",dI(gvn(id+".tr")));
-    }else{
-      h+=rcell(id+".v",dI(gvn(id+".v")))+'<td class="std">—</td><td class="std">—</td>';
-    }
-    h+='</tr>';
-  });
-  h+='<tr class="pan"><td class="l sy">Ｐ－４　動力制御盤</td>'+
-     '<td class="std" colspan="3">点検表に測定項目なし</td></tr></table>';
-
-  /* --- 冷媒圧力 --- */
-  h+='<h3>冷媒圧力（Mpa）</h3><table class="rtbl">'+
-    '<colgroup><col style="width:34%"><col style="width:22%"><col style="width:16%"><col style="width:12%"><col style="width:16%"></colgroup>'+
-    '<tr><th class="l">名称</th><th>高圧基準</th><th>測定</th><th>低圧基準</th><th>測定</th></tr>';
-  REP_PR.forEach(([id,nm])=>{
-    const fh=fieldByKey(id+".h"),fl=fieldByKey(id+".l");
-    h+='<tr><td class="l sy">'+symHTML(nm)+'</td>'+
-       '<td class="std">'+d2(fh.rng[0])+"～"+d2(fh.rng[1])+'</td>'+
-       rcell(id+".h",d2(gvn(id+".h")))+
-       '<td class="std">'+d2(fl.rng[0])+"～"+d2(fl.rng[1])+'</td>'+
-       rcell(id+".l",d2(gvn(id+".l")))+'</tr>';
-  });
-  h+='</table><div class="repnote">冷媒 R410A／高圧カット 4.10Mpa。基準の範囲は運転中の値です。</div>';
-
-  /* --- 設定温度・FS動作確認 --- */
-  h+='<h3>ﾎｰﾑｽﾎﾟｯﾄ設定温度（℃）／FS動作確認</h3><table class="rtbl">'+
-    '<colgroup><col style="width:62%"><col style="width:38%"></colgroup>'+
-    '<tr><td class="l sy">1・2番ホーム</td>'+rcell("temp.t12",d1(gvn("temp.t12")))+'</tr>'+
-    '<tr><td class="l sy">3・4番ホーム</td>'+rcell("temp.t34",d1(gvn("temp.t34")))+'</tr>'+
-    '<tr><td class="l sy">排水ﾎﾟﾝﾌﾟ FS動作確認</td>'+
-      (has("dpan.fs")?'<td class="v '+scls("dpan.fs")+'">'+val["dpan.fs"]+'</td>':'<td class="v miss">未選択</td>')+
-    '</tr></table>';
-
-  /* --- 積算電力量 --- */
-  h+='<h3>各動力盤 積算電力量（kWh）</h3><table class="rtbl">'+
-    '<colgroup><col style="width:60%"><col style="width:40%"></colgroup>'+
-    '<tr><th class="l">名称</th><th>使用量</th></tr>';
-  let sum=0,sumOK=true;
-  REP_KW.forEach(([id,nm])=>{
-    const d=diffOf(id+".v");
-    if(d===null)sumOK=false;else sum+=d;
-    h+='<tr><td class="l sy">'+nm+'</td>'+rcell(id+".v",dI(d))+'</tr>';
-  });
-  h+='<tr><td class="l sy">小　計</td><td class="v">'+(sumOK?dI(sum):"—")+'</td></tr></table>'+
-     '<div class="repnote">使用量は「今回の読み値 − 前回の読み値」。</div>';
-
-  /* --- 備考 --- */
+  RIGHT[10]=xv(8);
+  RIGHT[11]=xv(8);
+  const prevD=String((HIST[HIST.length-1]||{}).d||"—").replace(/^0/,"").replace("/0","/");
+  RIGHT[12]='<td class="hd" colspan="3">備　考</td>'+
+    '<td class="n">'+prevD+'</td><td class="ctr">～</td>'+
+    '<td class="n">'+(mdOf(info.date)||"—")+'</td>'+
+    '<td class="hd" colspan="2">運転時間</td>';
   const rm=ITEMS.find(it=>it.id==="rm")||{f:[]};
-  const rtxt=rm.f.map(f=>val["rm."+f.id]).filter(s=>s&&String(s).trim()).join("\n");
-  h+='<h3>備考（運転期間 '+prevD+' ～ '+mdOf(info.date)+'）</h3>'+
-     '<div class="rmk">'+(rtxt?rtxt.replace(/</g,"&lt;"):"（記入なし）")+'</div>';
+  const rtx=rm.f.map(f=>val["rm."+f.id]).filter(s=>s&&String(s).trim());
+  for(let i=0;i<10;i++){
+    let t=rtx[i]||"";
+    if(i===9&&rtx.length>10)t=rtx.slice(9).join("／");
+    RIGHT[13+i]='<td class="rmk" colspan="8">'+String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;")+'</td>';
+  }
 
+  XL_ROWS.forEach((it,i)=>{
+    /* 記号の全角換算の長さでサイズを変える（Excelがセルごとに9/10/11ptを使っているのと同じ） */
+    const bl=[...it.b].reduce((n,ch)=>n+(ch.charCodeAt(0)>0xFF?1:0.5),0);
+    const sz=bl>=6?" s9":bl>=5?" s10":"";
+    let L='<td class="sy'+sz+'">'+symHTML(it.b)+'</td><td class="nm" colspan="2">'+it.nm+'</td>';
+    /* 電流・定格・運転時間 */
+    if(it.id){
+      L+=it.noA?xe(1):xc(it.id+".a",d1(gvn(it.id+".a")));
+      L+='<td class="std">'+d1(RATED[it.id])+'</td>';
+      L+=xc(it.id+".h",d1(diffOf(it.id+".h")));
+    }else{
+      L+=xe(3);
+    }
+    /* 電圧 RS/ST/TR */
+    if(it.volt){
+      L+=["rs","st","tr"].map(f=>xc(it.volt+"."+f,dI(gvn(it.volt+"."+f)))).join("");
+    }else if(it.volt1){
+      L+=xc(it.volt1,dI(gvn(it.volt1)))+xe(2);
+    }else if(it.temp){
+      L+=xe(1)+'<td class="hd">設定温度</td>'+xc(it.temp,d1(gvn(it.temp)));
+    }else if(it.fs){
+      L+='<td class="hd" colspan="2">FS動作確認</td>'+
+        (has("dpan.fs")?'<td class="n ctr '+scls("dpan.fs")+'">'+val["dpan.fs"]+'</td>'
+                       :'<td class="n ctr miss">未</td>');
+    }else{
+      L+=xe(3);
+    }
+    tr(i<18?5.8:5.9,L+xv(1)+(RIGHT[i]||xv(8)));
+  });
+  /* r27〜r29 左は空き。右は備考の続き */
+  for(let i=20;i<23;i++)tr(5.9,xv(9)+xv(1)+(RIGHT[i]||xv(8)));
+
+  h+='</tbody></table></div></div>';
   body.insertAdjacentHTML("beforeend",h);
+  body.insertAdjacentHTML("beforeend",
+    '<div class="repnote">列幅・行の並び・結合はExcelの「姪浜総括」と同じです。'+
+    '定格は総括シートF列の値（入力画面の基準値とは別の数字）。'+
+    '運転時間は「今回の積算時間 − 前回の積算時間」、使用量は「今回の読み値 − 前回の読み値」。'+
+    '赤は未入力、橙は基準値・前回比の注意です。</div>');
   frag.appendChild(body);
 
   const foot=el("div","pfoot");
@@ -1437,6 +1476,7 @@ function openSummary(){
   const ob=el("button","btn","転記用データを出す");ob.onclick=openOutput;foot.appendChild(ob);
   frag.appendChild(foot);
   openPop(frag,true);
+  $("#panel").classList.add("xlwide");
   requestAnimationFrame(()=>{$("#panel").scrollTop=0;});
 }
 

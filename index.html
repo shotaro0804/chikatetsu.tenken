@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light only">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>姪浜駅 空調衛生設備 点検入力</title>
+<style>
+:root{
+  color-scheme:light only;
+  --bg:#F0EEE6;--surface:#FAF9F5;--white:#FFFFFF;
+  --line:#E0DDD2;--line2:#CFCBBD;
+  --hi:#D97757;--hi-dim:#BE5F41;--hi-soft:#F7EBE4;
+  --ink:#1F1E1C;--muted:#78756C;
+  --fault:#BC3B2E;--warn:#B4761A;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --jp:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{background:var(--bg) !important;min-height:100%}
+body{margin:0;background:var(--bg) !important;min-height:100vh;overscroll-behavior-y:none}
+body::before{content:"";position:fixed;inset:0;background:var(--bg);z-index:-1;pointer-events:none}
+#app{position:relative;z-index:0}
+body{font-family:var(--jp);color:var(--ink);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+button{font-family:var(--jp);cursor:pointer;border:none;background:none;color:inherit}
+.wrap{max-width:660px;margin:0 auto;padding:0 10px 100px}
+
+/* ===== ヘッダー ===== */
+.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.top-in{max-width:660px;margin:0 auto;padding:9px 12px 8px}
+.sta{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.sta b{font-size:16px;font-weight:700;letter-spacing:.04em}
+.sta span{font-family:var(--mono);font-size:12.5px;font-weight:600;color:var(--ink)}
+.gauge{height:7px;background:#E4E1D7;border-radius:4px;margin-top:7px;display:flex;overflow:hidden}
+.gauge i{height:100%;transition:width .3s ease}
+.gauge .mine{
+  background:linear-gradient(180deg,#B6F06A 0%,#5CCB63 42%,#189A52 62%,#7FE08C 100%);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.75),inset 0 -1px 0 rgba(0,0,0,.14)}
+.gauge .buddy{
+  background:linear-gradient(180deg,#D7F3B4 0%,#A9DCA8 45%,#7FBE96 62%,#C4E9C6 100%);
+  opacity:.75}
+.gtxt{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:4px}
+.gtxt b{color:var(--ink)}
+
+/* ===== 点検情報バー / 相方 ===== */
+.slim{display:flex;align-items:center;gap:8px;width:100%;background:var(--surface);border:1px solid var(--line);
+  border-radius:8px;padding:9px 11px;margin-top:8px;font-size:13px;text-align:left}
+.slim .k{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.1em;flex:0 0 auto}
+.slim .v{flex:1;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slim .go{color:var(--hi-dim);font-size:18px;font-weight:700;flex:0 0 auto}
+.slim.buddy .dot{width:8px;height:8px;border-radius:50%;background:var(--hi);flex:0 0 auto;
+  box-shadow:0 0 0 3px rgba(217,119,87,.18);animation:blink 2.2s infinite}
+.slim.buddy.off{color:var(--muted)}
+.slim.buddy.off .dot{background:#C2BEB2;box-shadow:none;animation:none}
+.slim.buddy b{color:var(--hi-dim)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ===== グループ ===== */
+.gl{display:flex;align-items:baseline;gap:8px;margin:14px 2px 6px}
+.gl h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.1em;color:var(--muted)}
+.gl .rule{flex:1;height:0;border-top:1px solid var(--ink);align-self:center}
+.gl .n{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+
+/* ===== セル ===== */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(106px,1fr));gap:6px}
+.cell{position:relative;background:var(--surface);border:1.5px dotted var(--ink);border-radius:8px;
+  padding:8px 8px 9px;text-align:left;min-height:66px;display:flex;flex-direction:column;justify-content:space-between;
+  overflow:hidden}
+.cell:active{background:#F2F0E8}
+.cell .sym{font-family:var(--mono);font-size:13.5px;font-weight:700;letter-spacing:.01em;line-height:1.25}
+.cell .nm{font-size:10.5px;color:var(--muted);line-height:1.3;margin-top:2px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.cell .st{font-family:var(--mono);font-size:10.5px;color:#B5B1A5;margin-top:5px;font-weight:700}
+.cell.part .st{color:var(--ink)}
+.cell.full{
+  border:2px solid transparent;padding:7px 7px 8px;
+  background-image:linear-gradient(180deg,#FAFFFC,#EDF9F2),linear-gradient(140deg,#8FF0C0 0%,#1FA968 38%,#0E7C4A 62%,#6FE3AE 100%);
+  background-origin:border-box;background-clip:padding-box,border-box;
+  box-shadow:0 0 0 1px rgba(14,124,74,.12),0 2px 7px rgba(14,124,74,.18),inset 0 1px 0 rgba(255,255,255,.9)}
+.cell.full .st{color:#12905A}
+.cell.full .nm{color:#5C7E6C}
+.cell.none{opacity:.45}
+.cell .flag{position:absolute;top:0;right:0;font-family:var(--mono);font-size:9.5px;font-weight:700;
+  padding:2px 6px;border-bottom-left-radius:7px;color:#fff}
+.cell.hasWarn .flag{background:var(--warn)}
+.cell.hasFault .flag{background:var(--fault)}
+
+/* ===== ぼかし ===== */
+#app{transition:filter .18s ease}
+#app.blurred{filter:blur(4px) saturate(.9);pointer-events:none}
+
+/* ===== ポップアップ ===== */
+.pop{position:fixed;inset:0;z-index:60;display:none;overscroll-behavior:contain;align-items:center;justify-content:center;padding:14px;
+  background:rgba(31,30,28,.42)}
+.pop.show{display:flex}
+.panel{width:100%;max-width:430px;max-height:88vh;overflow-y:auto;overscroll-behavior:contain;background:var(--white);
+  border-radius:14px;box-shadow:0 18px 50px rgba(31,30,28,.3);animation:rise .18s ease}
+@keyframes rise{from{transform:translateY(10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+.phead{position:sticky;top:0;z-index:5;background:var(--white);border-bottom:1px solid var(--line);
+  padding:14px 16px 11px;border-radius:14px 14px 0 0}
+.phead .sym{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--ink)}
+.phead .nm{font-size:13px;color:var(--muted);margin-top:1px}
+.phead .x{position:absolute;top:8px;right:8px;width:40px;height:40px;font-size:22px;color:var(--muted);line-height:1}
+.pbody{padding:14px 16px 4px}
+
+/* ===== メモ ===== */
+.phead.hasMemo{padding-right:144px}
+.memoBtn{position:absolute;top:12px;right:80px;height:34px;padding:0 12px;border-radius:8px;
+  border:1.5px dotted var(--ink);background:var(--white);color:var(--ink);
+  font-size:12.5px;font-weight:700;line-height:1;white-space:nowrap}
+.memoBtn.on{background:var(--ink);color:#fff;border-style:solid}
+.cell .mdot{position:absolute;top:7px;right:7px;width:9px;height:9px;border-radius:5px;
+  background:var(--ink);box-shadow:0 0 0 2px var(--surface)}
+.cell.hasWarn .mdot{top:5px;right:40px}
+.cell.hasFault .mdot{top:5px;right:50px}
+.mgrid{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.thumb{position:relative;width:86px;height:86px;border-radius:8px;overflow:hidden;
+  border:1.5px dotted var(--ink);background:var(--bg);flex:0 0 auto}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .del{position:absolute;top:3px;right:3px;width:26px;height:26px;border-radius:13px;
+  background:rgba(31,30,28,.8);color:#fff;font-size:14px;line-height:1;padding:0}
+.addPh{width:86px;height:86px;border-radius:8px;border:1.5px dotted var(--line2);
+  background:var(--bg);color:var(--muted);font-size:12px;font-weight:700;line-height:1.4;flex:0 0 auto}
+.mhint{font-size:12px;color:var(--muted);line-height:1.6;margin-top:10px}
+.fld{margin-bottom:16px}
+.fld .lab{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
+.fld .lab b{font-size:14px;font-weight:700}
+.fld .lab span{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.row{display:flex;gap:8px}
+input,select,textarea{font-family:var(--mono);font-size:23px;font-weight:700;color:var(--ink);width:100%;
+  min-height:58px;padding:8px 12px;border:1.5px dotted var(--ink);background:var(--white);border-radius:8px}
+textarea{font-family:var(--jp);font-size:15px;font-weight:400;min-height:auto;line-height:1.55;padding:11px 12px}
+select{font-family:var(--jp);font-size:17px;font-weight:600}
+input:focus,select:focus,textarea:focus{outline:3px solid rgba(31,30,28,.22);border-color:var(--ink)}
+input.ok{
+  border:1.5px solid transparent;
+  background-image:linear-gradient(180deg,#FFFFFF,#F4FDF8),
+                   linear-gradient(140deg,#8FF0C0 0%,#1FA968 38%,#0E7C4A 62%,#6FE3AE 100%);
+  background-origin:border-box;background-clip:padding-box,border-box;
+  box-shadow:0 0 0 1px rgba(14,124,74,.10),0 2px 8px rgba(14,124,74,.16),inset 0 1px 0 rgba(255,255,255,.9)}
+input.warn{border-color:var(--warn)}
+input.bad{border-color:var(--fault)}
+input::placeholder{color:#BEBAAE}
+.unit{display:flex;align-items:center;font-family:var(--mono);font-size:13px;color:var(--muted);flex:0 0 auto;min-width:40px}
+.same{flex:0 0 auto;min-width:88px;border:2px solid var(--hi);border-radius:8px;background:var(--hi-soft);
+  color:var(--hi-dim);font-size:12.5px;font-weight:700;line-height:1.25}
+.same:active{background:var(--hi);color:#fff}
+.dwg{flex:0 0 auto;min-width:56px;border:1.5px dotted var(--ink);border-radius:8px;background:var(--white);
+  color:var(--ink);font-size:11.5px;font-weight:700;line-height:1.35;white-space:nowrap}
+.cam{flex:0 0 auto;min-width:52px;border:1.5px dotted var(--ink);border-radius:8px;background:var(--white);
+  color:var(--ink);font-size:12px;font-weight:700;line-height:1.35;white-space:nowrap}
+.cam:disabled{color:var(--muted);border-color:var(--line2)}
+.camMsg{display:none;font-size:12px;font-weight:700;color:var(--warn);margin-top:7px;line-height:1.5}
+.camMsg.show{display:block}
+.campane{display:none;margin-top:9px}
+.campane.show{display:block}
+.campane img{display:block;width:100%;max-height:220px;object-fit:contain;background:var(--bg);
+  border:1.5px dotted var(--ink);border-radius:8px}
+.camnote{font-size:12px;color:var(--muted);line-height:1.5;margin-top:6px}
+.camrow{display:flex;gap:7px;margin-top:7px}
+.camrow .mini{flex:1;min-width:0;padding:0 6px;font-size:12.5px}
+.mini.go{background:var(--ink);color:#fff;border-color:var(--ink)}
+.mini.go:disabled{background:#DAD6CA;color:#96927F;border-color:#DAD6CA}
+.msg{font-size:12.5px;margin-top:7px;display:none;font-weight:700;line-height:1.45}
+.msg.show{display:block}
+.msg.warn{color:var(--warn)}.msg.fault{color:var(--fault)}.msg.ok{color:var(--muted)}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{border:2px solid var(--line2);border-radius:8px;background:var(--white);padding:11px 14px;
+  font-family:var(--mono);font-size:15px;font-weight:700;min-height:50px}
+.chip[aria-pressed=true]{background:var(--white);color:var(--ink);border:3px solid var(--ink)}
+.pfoot{position:sticky;bottom:0;z-index:5;background:var(--white);border-top:1px solid var(--line);
+  padding:11px 16px calc(11px + env(safe-area-inset-bottom));display:flex;gap:9px;border-radius:0 0 14px 14px}
+.pair{display:flex;gap:8px}.pair>div{flex:1;min-width:0}
+.lbl{font-size:12px;color:var(--muted);margin-bottom:4px}
+.note{font-size:12.5px;color:var(--muted);line-height:1.6;background:var(--hi-soft);border-radius:8px;padding:10px 12px}
+
+/* ===== ボタン ===== */
+.btn{flex:1;min-height:54px;border-radius:9px;background:var(--ink);color:#fff;font-size:15.5px;font-weight:700;letter-spacing:.04em}
+.btn:disabled{background:#DAD6CA;color:#96927F}
+.btn.ghost{flex:0 0 auto;min-width:100px;background:transparent;color:var(--ink);border:2px solid var(--line2)}
+.bottom{position:fixed;left:0;right:0;bottom:0;z-index:20;background:rgba(240,238,230,.94);
+  border-top:1px solid var(--line);padding:9px 10px calc(9px + env(safe-area-inset-bottom));
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.bottom .in{max-width:660px;margin:0 auto;display:flex;gap:8px}
+
+/* ===== 出力 ===== */
+.out{font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:7px;
+  padding:10px;white-space:pre;overflow-x:auto;margin:0 0 8px;line-height:1.75}
+.out-lbl{font-family:var(--mono);font-size:11.5px;color:var(--hi-dim);margin:14px 0 5px;font-weight:700;letter-spacing:.05em}
+.mini{min-height:44px;padding:0 14px;border:2px solid var(--line2);border-radius:7px;font-size:13.5px;font-weight:700}
+
+/* ===== 履歴 ===== */
+.hist{margin-top:9px;border-top:1px dashed var(--line2);padding-top:8px}
+.hist .hl{font-size:11px;color:var(--muted);letter-spacing:.06em;margin-bottom:5px}
+.spark{display:block;width:100%;height:34px;margin-bottom:5px}
+.hscroll{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;touch-action:pan-x pan-y}
+.hcell{flex:0 0 auto;min-width:66px;text-align:center;border:1px solid var(--line);border-radius:6px;
+  padding:4px 6px;background:var(--bg)}
+.hcell .d{font-family:var(--mono);font-size:9.5px;color:var(--muted)}
+.hcell .n{font-family:var(--mono);font-size:13px;font-weight:700;line-height:1.3}
+.hcell .dl{font-family:var(--mono);font-size:10px;line-height:1.25;color:var(--muted);
+  margin-top:2px;padding-top:2px;border-top:1px dotted var(--line2)}
+.hcell.last{border-color:var(--ink)}
+.hcell.last .n{color:var(--ink)}
+.hcell.last .d{color:var(--ink)}
+.hcell.bad .n{color:var(--warn)}
+.hcell .dl.up{color:var(--ink)}
+.hcell .dl.over{color:var(--warn);font-weight:700}
+.hcell .dl.minus{color:var(--fault);font-weight:700}
+.wide{max-width:min(96vw,900px)}
+/* 履歴表：横スクロール。左端の項目名だけ固定 */
+.scrollx{overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;
+  border:1px solid var(--line);border-radius:8px;background:var(--white);
+  position:relative;z-index:0;isolation:isolate;contain:paint}
+.tbl{border-collapse:separate;border-spacing:0;width:max-content;
+  font-family:var(--mono);font-size:12px}
+.tbl td{height:30px;padding:0 8px;border-bottom:1px solid var(--line);
+  white-space:nowrap;text-align:right;min-width:66px;background:var(--white)}
+.tbl td.h{position:sticky;left:0;z-index:2;text-align:left;
+  font-family:var(--jp);font-size:11px;font-weight:600;
+  min-width:146px;max-width:146px;overflow:hidden;text-overflow:ellipsis;
+  border-right:1px solid var(--line2)}
+.tbl tr.grp td{background:var(--bg);color:var(--muted);font-size:10.5px;font-weight:700}
+.tbl tr.grp td.h{font-family:var(--jp);font-size:11px;letter-spacing:.04em;color:var(--ink)}
+.tbl td.now{background:#F1FAF5;color:#0E7C4A;font-weight:700}
+.tbl td.bad{color:var(--warn);font-weight:700}
+.swipehint{font-size:11.5px;color:var(--muted);margin-bottom:7px}
+
+/* ===== チェックボックス ===== */
+input[type=checkbox]{width:26px;height:26px;min-height:26px;padding:0;margin:0;border:0;
+  accent-color:#12905A;flex:0 0 auto;border-radius:0;background:none}
+.chk{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:#F2FBF6;border:1px solid #BFE6D2;border-radius:9px;padding:11px 12px;
+  font-size:13.5px;font-weight:700;color:#0E7C4A;cursor:pointer}
+.chk.off{background:var(--surface);border-color:var(--line);color:var(--muted)}
+.chk .sub{font-weight:400;font-size:11.5px;color:var(--muted);display:block;margin-top:1px}
+.chk .tx{flex:1;min-width:0}
+.chkbar{margin-top:8px}
+.pbody .chk{margin-bottom:15px}
+
+.chkrow{display:flex;gap:6px;margin-top:8px}
+.chkrow .chk{margin-top:0}
+.chk.neutral{background:var(--surface);border-color:var(--line2);color:var(--ink)}
+.chk.neutral input[type=checkbox]{
+  -webkit-appearance:none;appearance:none;width:26px;height:26px;border:2px solid var(--ink);
+  border-radius:5px;background:#fff;position:relative}
+.chk.neutral input[type=checkbox]:checked::after{
+  content:"";position:absolute;left:7px;top:2px;width:7px;height:13px;
+  border:solid var(--ink);border-width:0 2.6px 2.6px 0;transform:rotate(45deg)}
+.chk .cnt{font-family:var(--mono);font-size:11px;color:var(--muted);flex:0 0 auto}
+
+/* ===== 系統別の文字色 ===== */
+.sym.gc0,h2.gc0{color:#1F1E1C}
+.sym.gc1,h2.gc1{color:#1B7A46}
+.sym.gc2,h2.gc2{color:#1D5FB5}
+.sym.gc3,h2.gc3{color:#C0271C}
+.sym.gc4,h2.gc4{color:#7A4BB5}
+.sym.gc5,h2.gc5{color:#1E9FD0}
+.sym.gc6,h2.gc6{color:#A87400}
+.sym.gc7,h2.gc7{color:#6E6B64}
+
+/* ===== 項目下の罫線 / グループ枠 ===== */
+.mk{font-family:var(--jp);font-size:1.15em;font-weight:700;line-height:1;
+  vertical-align:-.04em;margin-left:.06em;letter-spacing:0}
+.cell .sym{border-bottom:1px solid var(--line2);padding-bottom:4px}
+.cell .capt .nm{margin-top:4px}
+.cell.full .sym{border-bottom-color:rgba(14,124,74,.4)}
+.tbl th.corner{font-size:11px;color:var(--muted)}
+.tbl th.corner span{font-family:var(--mono);font-size:10px;color:#A6A296}
+.cell .by{font-family:var(--jp);font-size:9.5px;color:#12905A;margin-left:6px;font-weight:700}
+.byline{font-size:11.5px;color:#12905A;margin-top:6px;font-weight:700}
+input[type=date]{-webkit-appearance:none;appearance:none;font-size:19px;
+  padding:8px 12px;min-width:0;width:100%;display:block;text-align:left}
+@media (prefers-color-scheme:dark){
+  html,body{background:#F0EEE6 !important}
+  body,.cell,.card,.panel,.sheet{color:var(--ink)}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="top">
+    <div class="top-in">
+      <div class="sta"><b>姪浜駅 空調衛生設備</b><span id="noLabel">No.15</span></div>
+      <div class="gauge"><i class="mine" id="barMine" style="width:0"></i><i class="buddy" id="barBuddy" style="width:0"></i></div>
+      <div class="gtxt"><span><b id="pDone">0</b> / <span id="pTotal">0</span> 項目</span><span id="pPct">0%</span></div>
+    </div>
+  </div>
+  <div class="wrap">
+    <noscript>
+      <div style="background:#FDECE6;border:1px solid #E7B39C;border-radius:9px;padding:14px;margin-top:12px;
+                  font-size:14px;line-height:1.7;color:#8A3B1C">
+        <b>この画面はまだ動いていません。</b><br>
+        メールやファイルのプレビューでは中身が表示されません。
+        右上または下部の共有ボタンから <b>「Safariで開く」</b> を選んでください。
+      </div>
+    </noscript>
+    <button class="slim" id="infoBar">
+      <span class="k">点検</span><span class="v" id="infoTxt">—</span><span class="go">›</span>
+    </button>
+    <div class="chkrow">
+      <label class="chk" id="voltBar">
+        <input type="checkbox" id="voltChk" checked>
+        <span class="tx">電圧は前回どおり<span class="sub">6盤・16項目を確定</span></span>
+      </label>
+      <label class="chk neutral" id="hideBar">
+        <input type="checkbox" id="hideChk" checked>
+        <span class="tx">電圧の盤を隠す<span class="sub" id="hideSub">—</span></span>
+      </label>
+    </div>
+    <div class="slim buddy off" id="buddyBar" style="display:none"><span class="dot"></span><span class="v" id="buddyTxt">相方の入力を待っています</span></div>
+    <div id="groups"></div>
+  </div>
+</div>
+
+<div class="bottom"><div class="in">
+  <button class="btn ghost" id="btnHist">履歴</button>
+  <button class="btn" id="btnOut" disabled>転記用データを出す</button>
+</div></div>
+
+<div class="pop" id="pop"><div class="panel" id="panel"></div></div>
+
+<script>
+/* ============ 姪浜駅 実データ（前回値 = No.14 / 2026-07-06） ============ */
+const INSPECTORS=["塚本","川﨑","笹田","西田","石田","平野","田中","梶原","久高","牧瀬","福地","土持","新崎"];
+const TIMES=["9:00","10:30","13:00","14:30","16:00"];
+const V3=p=>[{id:"rs",lab:"RS",t:"volt",unit:"V",prev:p},{id:"st",lab:"ST",t:"volt",unit:"V",prev:p},{id:"tr",lab:"TR",t:"volt",unit:"V",prev:p}];
+const CA=(std,prev)=>({id:"a",lab:"電流",t:"cur",unit:"A",std,prev});
+const HR=prev=>({id:"h",lab:"積算時間",t:"hour",unit:"H",prev});
+
+const ITEMS=[
+/* --- 点検項目（現場用の並び） --- */
+{g:0,id:"p1",  sym:"P-1",   nm:"動力制御盤",              f:V3(440)},
+{g:0,id:"p3",  sym:"P-3",   nm:"動力制御盤",              f:V3(440)},
+{g:0,id:"p4",  sym:"P-4",   nm:"動力制御盤",              f:[]},
+{g:0,id:"mac21",sym:"MAC-21",nm:"駅務室系統空調機",       f:[CA(60.0,10.0),HR(41797.0)]},
+{g:0,id:"sf21",sym:"SF-21", nm:"駅務室系統送風機",        f:[CA(1.6,1.5),HR(59856.1)]},
+{g:0,id:"ef21",sym:"EF-21", nm:"駅務室系統排風機",        f:[CA(1.0,1.0),HR(59856.5)]},
+{g:1,id:"dkan",sym:"電気室 換気盤",nm:"電気室換気装置動力制御盤",f:V3(440)},
+{g:1,id:"sf31",sym:"SF-31", nm:"電気室送風機",            f:[CA(2.5,2.5),HR(55780.3)]},
+{g:1,id:"ef31",sym:"EF-31", nm:"電気室排風機",            f:[CA(2.0,2.0),HR(55774.6)]},
+{g:2,id:"p5",  sym:"P-5",   nm:"動力制御盤",              f:V3(440)},
+{g:2,id:"ac41",sym:"AC-41", nm:"信通機器室空調機",        f:[CA(48.0,21.0),HR(29590.8)]},
+{g:3,id:"pac71",sym:"PAC-71",nm:"ホームスポット 1・2番A側",f:[HR(47083.9)]},
+{g:3,id:"pac73",sym:"PAC-73",nm:"ホームスポット 1・2番B側",f:[HR(38837.9)]},
+{g:3,id:"pac72",sym:"PAC-72",nm:"ホームスポット 3・4番A側",f:[HR(54621.8)]},
+{g:3,id:"pac74",sym:"PAC-74",nm:"ホームスポット 3・4番B側",f:[HR(39747.2)]},
+{g:3,id:"temp",sym:"設定温度",nm:"ホームスポット",
+  f:[{id:"t12",lab:"1・2番ホーム",t:"temp",unit:"℃",prev:23},{id:"t34",lab:"3・4番ホーム",t:"temp",unit:"℃",prev:23}]},
+{g:4,id:"dpan",sym:"排水 動力盤",nm:"排水ポンプ動力制御盤",
+  f:[{id:"v",lab:"電圧（単相）",t:"volt",unit:"V",prev:100},{id:"fs",lab:"FS動作確認",t:"choice",opts:["良","不"],prev:"良"}]},
+{g:4,id:"tp",  sym:"TP",    nm:"排水ポンプ",              f:[CA(5.0,5.0),HR(13.1)]},
+{g:4,id:"sf",  sym:"SF",    nm:"ポンプ室系統給気ファン",  f:[CA(1.6,1.6),HR(17.9)]},
+{g:4,id:"ef",  sym:"EF",    nm:"ポンプ室系統排気ファン",  f:[CA(1.4,1.3),HR(34.5)]},
+{g:4,id:"kasen",sym:"消火栓 動力盤",nm:"消火栓ポンプ動力制御盤",f:V3(440)},
+
+/* --- 冷媒圧力 --- */
+{g:5,id:"prs1",sym:"MAC-21-0 ①",nm:"冷媒圧力",
+  f:[{id:"h",lab:"高圧",t:"press",unit:"Mpa",rng:[2.62,3.39],prev:2.2},{id:"l",lab:"低圧",t:"press",unit:"Mpa",rng:[0.60,0.98],prev:0.8}]},
+{g:5,id:"prs2",sym:"MAC-21-0 ②",nm:"冷媒圧力",
+  f:[{id:"h",lab:"高圧",t:"press",unit:"Mpa",rng:[2.62,3.39],prev:0.8},{id:"l",lab:"低圧",t:"press",unit:"Mpa",rng:[0.60,0.98],prev:0.8}]},
+{g:5,id:"prs3",sym:"AC-41",nm:"冷媒圧力",
+  f:[{id:"h",lab:"高圧",t:"press",unit:"Mpa",rng:[2.62,3.39],prev:1.6},{id:"l",lab:"低圧",t:"press",unit:"Mpa",rng:[0.60,0.98],prev:1.4}]},
+
+/* --- 各動力盤 積算電力量 --- */
+{g:6,id:"kw1",sym:"駅務室 空調機",nm:"室内機等／機械室",f:[{id:"v",lab:"積算電力量",t:"kwh",unit:"kWh",prev:502305}]},
+{g:6,id:"kw2",sym:"駅務室 送排風機",nm:"送風機・排風機・フィルター",f:[{id:"v",lab:"積算電力量",t:"kwh",unit:"kWh",prev:63854}]},
+{g:6,id:"kw3",sym:"電気室 主幹",nm:"電気室換気装置動力制御盤",f:[{id:"v",lab:"積算電力量",t:"kwh",unit:"kWh",prev:176162}]},
+{g:6,id:"kw4",sym:"信通 主幹",nm:"信通機器室動力制御盤",f:[{id:"v",lab:"積算電力量",t:"kwh",unit:"kWh",prev:411932}]},
+{g:6,id:"kw5",sym:"排水P室 主幹",nm:"排水ポンプ室",f:[{id:"v",lab:"積算電力量",t:"kwh",unit:"kWh",prev:1797}]},
+{g:6,id:"kw6",sym:"排水ポンプ TP",nm:"",f:[{id:"v",lab:"積算電力量",t:"kwh",unit:"kWh",prev:8}]},
+
+/* --- 備考 --- */
+{g:7,id:"rm",sym:"備考",nm:"外観・処置・引継ぎ",f:[{id:"r1",lab:"備考 1",t:"text",prev:"外観機能点検異常なし。"},{id:"r2",lab:"備考 2",t:"text",prev:""}]}
+];
+ITEMS.sort((a,b)=>a.g-b.g);
+const GROUPS=["駅務室系統","電気室系統","信通機器室系統","ホーム系統","衛生設備系統","冷媒圧力","各動力盤 積算電力量","備考"];
+
+/* ===== 過去の点検値（No.1〜14 実データ） ===== */
+const HIST=[{"no":1,"d":"04/06","a":[5.0,1.6,1.1,2.6,2.0,9.0,5.0,1.6,1.4],"p":[1.1,1.1,2.9,0.8,1.5,1.5],"t":[22.0,22.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41020.0,57935.8,57936.1,54195.1,54189.5,28499.2,46721.9,38432.5,53960.6,39135.2,13.0,17.9,34.4],"k":[495827.0,62200.0,171310.0,397525.0,1765.0,8.0]},{"no":2,"d":"04/13","a":[0.0,1.6,1.0,2.7,2.0,10.0,5.0,1.6,1.4],"p":[1.1,1.1,2.5,0.8,1.4,1.4],"t":[22.0,22.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41077.0,58082.4,58082.7,54232.7,54227.2,28552.8,46757.5,38474.6,54006.9,39172.7,13.0,17.9,34.4],"k":[496425.0,62329.0,171430.0,398330.0,1767.0,8.0]},{"no":3,"d":"04/20","a":[5.0,1.5,1.0,2.7,2.0,10.0,5.0,1.6,1.4],"p":[2.4,1.0,1.4,1.4,2.3,0.7],"t":[24.0,24.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41116.0,58230.1,58230.3,54287.9,54282.3,28614.7,46786.6,38511.6,54041.1,39205.1,13.0,17.9,34.4],"k":[496766.0,62460.0,171606.0,399220.0,1770.0,8.0]},{"no":4,"d":"04/27","a":[0.0,1.6,1.1,2.6,2.0,10.0,5.0,1.6,1.4],"p":[1.4,1.4,1.4,1.3,1.5,1.5],"t":[22.0,22.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41155.0,58377.2,58377.4,54326.6,54320.9,28672.9,46833.1,38564.5,54082.3,39240.6,13.0,17.9,34.4],"k":[497157.0,62590.0,171729.0,400078.0,1772.0,8.0]},{"no":5,"d":"05/07","a":[0.0,1.6,1.0,2.5,2.0,20.0,5.0,1.6,1.4],"p":[1.4,1.4,1.2,1.2,2.2,0.7],"t":[23.0,23.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41214.0,58587.4,58587.6,54411.7,54406.0,28762.0,46895.5,38626.6,54091.9,39255.1,13.0,17.9,34.4],"k":[497643.0,62774.0,172001.0,401351.0,1776.0,8.0]},{"no":6,"d":"05/11","a":[0.0,1.5,1.1,2.6,2.0,40.0,5.0,1.6,1.3],"p":[1.4,1.4,1.2,1.2,2.2,0.9],"t":[23.0,23.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41223.0,58666.9,58667.1,54466.5,54460.8,28803.7,46900.8,38632.1,54094.4,39263.3,13.0,17.9,34.4],"k":[497765.0,62845.0,172174.0,401890.0,1777.0,8.0]},{"no":7,"d":"05/18","a":[10.0,1.6,1.0,2.5,2.0,40.0,5.0,1.6,1.4],"p":[0.8,0.8,2.7,0.8,1.8,0.9],"t":[23.0,23.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41281.0,58817.3,58817.5,54612.3,54606.5,28893.2,46901.5,38656.0,54131.5,39283.9,13.0,17.9,34.4],"k":[498039.0,62976.0,172638.0,403041.0,1780.0,8.0]},{"no":8,"d":"05/25","a":[5.0,1.6,1.0,2.6,2.0,41.0,5.0,1.6,1.4],"p":[0.8,0.8,2.2,0.8,2.4,0.7],"t":[23.0,23.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41352.0,58965.4,58965.6,54777.7,54772.0,28991.4,46901.5,38695.0,54191.0,39336.4,13.0,17.9,34.4],"k":[498554.0,63103.0,173151.0,404305.0,1783.0,8.0]},{"no":9,"d":"２０２６年６月１日","a":[10.0,1.5,1.0,2.5,2.0,33.0,5.0,1.5,1.3],"p":[0.8,0.8,2.6,0.8,2.0,0.9],"t":[23.0,23.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41441.0,59114.8,59115.0,54945.4,54939.7,29094.1,46901.5,38748.0,54271.2,39411.0,13.1,17.9,34.5],"k":[499196.0,63231.0,173662.0,405611.0,1785.0,8.0]},{"no":10,"d":"06/08","a":[5.0,1.5,1.0,2.5,2.0,40.0,5.0,1.6,1.4],"p":[2.2,0.7,0.7,0.7,2.0,0.9],"t":[23.0,23.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41525.0,59267.0,59267.0,55110.6,55104.9,29191.0,46927.0,38762.1,54327.7,39460.6,13.1,17.9,34.5],"k":[499765.0,63361.0,174162.0,406842.0,1787.0,8.0]},{"no":11,"d":"06/15","a":[0.0,1.5,1.1,2.5,2.0,42.0,5.0,1.6,1.4],"p":[2.4,0.8,0.8,0.8,2.3,0.7],"t":[23.0,23.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41590.0,59414.5,59414.8,55275.8,55270.0,29285.7,46955.5,38776.5,54382.7,39508.1,13.1,17.9,34.5],"k":[500215.0,63486.0,174661.0,408054.0,1790.0,8.0]},{"no":12,"d":"06/22","a":[0.0,1.5,1.1,2.5,1.9,9.0,5.0,1.6,1.4],"p":[2.2,0.9,0.9,0.9,1.6,1.4],"t":[23.0,23.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41656.0,59561.8,59562.0,55444.2,55438.5,29397.3,47010.7,38808.8,54487.3,39609.0,13.1,17.9,34.5],"k":[501032.0,63608.0,175159.0,409484.0,1792.9,8.0]},{"no":13,"d":"06/29","a":[1.0,1.6,1.0,2.5,1.9,8.0,5.0,1.6,1.3],"p":[0.8,0.7,2.3,0.8,1.4,1.4],"t":[23.0,23.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41730.0,59708.4,59708.6,55611.6,55605.9,29486.8,47033.9,38812.1,54527.1,39647.4,13.1,17.9,34.5],"k":[501564.0,63731.0,175660.0,410622.0,1795.0,8.0]},{"no":14,"d":"07/06","a":[10.0,1.5,1.0,2.5,2.0,21.0,5.0,1.6,1.3],"p":[2.2,0.8,0.8,0.8,1.6,1.4],"t":[23.0,23.0],"v":[440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,440.0,100.0],"fs":"良","vk":[440.0,440.0,440.0],"h":[41797.0,59856.1,59856.5,55780.3,55774.6,29590.8,47083.9,38837.9,54621.8,39747.2,13.1,17.9,34.5],"k":[502305.0,63854.0,176162.0,411932.0,1797.0,8.0]}];
+
+const HMAP={};
+["mac21","sf21","ef21","sf31","ef31","ac41","tp","sf","ef"].forEach((k,i)=>HMAP[k+".a"]=["a",i]);
+[["prs1","h",0],["prs1","l",1],["prs2","h",2],["prs2","l",3],["prs3","h",4],["prs3","l",5]]
+  .forEach(([it,f,i])=>HMAP[it+"."+f]=["p",i]);
+HMAP["temp.t12"]=["t",0];HMAP["temp.t34"]=["t",1];
+["p1.rs","p1.st","p1.tr","p3.rs","p3.st","p3.tr","dkan.rs","dkan.st","dkan.tr","p5.rs","p5.st","p5.tr","dpan.v"]
+  .forEach((k,i)=>HMAP[k]=["v",i]);
+HMAP["dpan.fs"]=["fs",null];
+["kasen.rs","kasen.st","kasen.tr"].forEach((k,i)=>HMAP[k]=["vk",i]);
+["mac21","sf21","ef21","sf31","ef31","ac41","pac71","pac73","pac72","pac74","tp","sf","ef"]
+  .forEach((k,i)=>HMAP[k+".h"]=["h",i]);
+["kw1","kw2","kw3","kw4","kw5","kw6"].forEach((k,i)=>HMAP[k+".v"]=["k",i]);
+function series(key){
+  const m=HMAP[key];if(!m)return null;
+  return HIST.map(r=>({d:r.d,no:r.no,v:m[1]===null?r[m[0]]:r[m[0]][m[1]]}));
+}
+/* 履歴セルの判定：その回の「ひとつ前の回」と比べる（今回の前回値とは比べない） */
+function badHist(f,arr,i){
+  const v=arr[i];
+  if(v===null||v===undefined)return false;
+  const p=i>0?arr[i-1]:null;
+  switch(f.t){
+    case"cur":  return typeof v==="number"&&v>f.std;
+    case"press":return typeof v==="number"&&(v<f.rng[0]||v>f.rng[1]);
+    case"hour":
+    case"kwh":  return typeof p==="number"&&typeof v==="number"&&v<p;
+    case"volt": return typeof p==="number"&&typeof v==="number"&&(v<p*0.9||v>p*1.1);
+    case"temp": return typeof v==="number"&&(v<16||v>30);
+    case"choice":return v==="不";
+  }
+  return false;
+}
+
+
+const info={date:new Date().toISOString().slice(0,10),no:"15",time:"16:00",whoA:"",whoB:""};
+const val={},stat={},meta={};
+ITEMS.forEach(it=>it.f.forEach(f=>{
+  const k=it.id+"."+f.id;
+  if(f.t==="text")val[k]=f.prev;
+}));
+const counted=f=>f.t!=="text";
+const VKEYS=[];
+ITEMS.forEach(it=>it.f.forEach(f=>{if(f.t==="volt")VKEYS.push([it.id+"."+f.id,f.prev]);}));
+function setVolt(on,ids){
+  VKEYS.forEach(([k,p])=>{
+    if(ids&&!ids.includes(k.split(".")[0]))return;
+    val[k]=on?String(p):"";if(!on)stat[k]="";
+    if(typeof mark==="function")mark(k);
+  });
+}
+function voltOn(ids){
+  const t=VKEYS.filter(([k])=>!ids||ids.includes(k.split(".")[0]));
+  return t.length>0&&t.every(([k,p])=>val[k]===String(p));
+}
+setVolt(true);
+let hideVolt=true;
+
+const keys=ITEMS.flatMap(it=>it.f.filter(counted).map(f=>it.id+"."+f.id));
+
+/* ①②などの丸数字は等幅フォントに無く、代替フォントで小さく出るので拡大する */
+const symHTML=s=>String(s).replace(/[\u2460-\u2473]/g,m=>`<span class="mk">${m}</span>`);
+
+const $=s=>document.querySelector(s);
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e;};
+const nz=v=>{const n=parseFloat(v);return isNaN(n)?null:n;};
+const has=k=>val[k]!==undefined&&val[k]!=="";
+
+/* ============ 検証 ============ */
+function check(f,v){
+  const p=f.prev;
+  switch(f.t){
+    case"cur":
+      if(v>f.std)return{lv:"warn",tx:`基準値 ${f.std}A を超えています（前回 ${p}A）。読み値を確認してください。`};
+      if(p>0&&(v>p*2||v<p*0.4))return{lv:"warn",tx:`前回から大きく変わっています ${v>p?"+":""}${(v-p).toFixed(1)}A`};
+      return null;
+    case"hour":
+      if(v<p)return{lv:"fault",tx:`前回 ${p}H より小さい値です。積算計は戻りません。`};
+      if(v-p>200)return{lv:"warn",tx:`前回から +${(v-p).toFixed(1)}H。1週間の上限は約168Hです。`};
+      return{lv:"ok",tx:`前回差 +${(v-p).toFixed(1)}H`};
+    case"kwh":
+      if(v<p)return{lv:"fault",tx:`前回 ${p.toLocaleString()} より小さい値です。`};
+      if(String(Math.floor(v)).length!==String(Math.floor(p)).length)
+        return{lv:"warn",tx:"桁数が前回と違います。打ち間違いの可能性があります。"};
+      return{lv:"ok",tx:`使用電力量 ${(v-p).toLocaleString()} kWh`};
+    case"press":
+      if(v<f.rng[0]||v>f.rng[1])
+        return{lv:"warn",tx:`基準範囲 ${f.rng[0]}〜${f.rng[1]} の外です`+((p<f.rng[0]||p>f.rng[1])?`（前回 ${p} も範囲外）`:"")};
+      return null;
+    case"volt":
+      if(v<p*0.9||v>p*1.1)return{lv:"warn",tx:`前回 ${p}V から10%以上ずれています。`};
+      return null;
+    case"temp":
+      if(v<16||v>30)return{lv:"warn",tx:"設定温度の範囲を確認してください。"};
+      return null;
+  }
+  return null;
+}
+
+/* ============ 一覧 ============ */
+function draw(){
+  const box=$("#groups");box.innerHTML="";
+  let hidden=0;
+  const isVoltOnly=it=>it.f.length>0&&it.f.every(f=>f.t==="volt");
+  GROUPS.forEach((gname,gi)=>{
+    const all=ITEMS.filter(it=>it.g===gi);
+    if(!all.length)return;
+    const ks=all.flatMap(it=>it.f.filter(counted).map(f=>it.id+"."+f.id));
+    const items=all.filter(it=>{
+      if(hideVolt&&isVoltOnly(it)){hidden++;return false;}
+      return true;
+    });
+    if(!items.length){return;}
+    const gl=el("div","gl");
+    gl.appendChild(el("h2","gc"+gi,gname));
+    gl.appendChild(el("div","rule"));
+    if(ks.length)gl.appendChild(el("span","n",ks.filter(has).length+" / "+ks.length));
+    box.appendChild(gl);
+    const g=el("div","grid");
+    items.forEach(it=>{
+      const fk=it.f.filter(counted).map(f=>it.id+"."+f.id);
+      const done=fk.filter(has).length,total=fk.length;
+      const warn=fk.some(k=>stat[k]==="warn"),fault=fk.some(k=>stat[k]==="fault");
+      const c=el("button","cell");c.type="button";
+      if(!total&&it.g!==7)c.classList.add("none");
+      else if(total&&done===total)c.classList.add("full");
+      else if(done)c.classList.add("part");
+      if(fault)c.classList.add("hasFault");else if(warn)c.classList.add("hasWarn");
+      c.innerHTML=`<div class="capt"><div class="sym gc${it.g}">${symHTML(it.sym)}</div><div class="nm">${it.nm}</div></div>`+
+        `<div class="st">${total?done+" / "+total:(it.g===7?"記入する":"測定なし")}`+
+          (()=>{const o=[...new Set(fk.filter(k=>has(k)&&meta[k]&&meta[k].by&&meta[k].by!=="—"&&meta[k].by!==me()).map(k=>meta[k].by))];
+                return o.length?`<span class="by">${o.join("・")}</span>`:"";})()+`</div>`+
+        (fault?'<span class="flag">要確認</span>':warn?'<span class="flag">注意</span>':"")+
+        (hasMemo(it.id)?'<span class="mdot"></span>':"");
+      c.onclick=()=>openItem(it);
+      g.appendChild(c);
+    });
+    box.appendChild(g);
+  });
+  const done=keys.filter(has).length,total=keys.length,pct=Math.round(done/total*100);
+  const mine=keys.filter(k=>has(k)&&(!meta[k]||meta[k].by===me()||meta[k].by==="—")).length;
+  $("#barMine").style.width=Math.round(mine/total*100)+"%";
+  $("#barBuddy").style.width=Math.round((done-mine)/total*100)+"%";
+  $("#pDone").textContent=done;
+  $("#pTotal").textContent=total;$("#pPct").textContent=pct+"%";
+  $("#btnOut").disabled=done===0;
+  $("#infoTxt").textContent=`${info.date} ${info.time}　${info.whoA||"点検者未設定"}${info.whoB?" ／ "+info.whoB:""}`;
+  $("#noLabel").textContent="No."+info.no;
+  const vo=voltOn();
+  $("#voltChk").checked=vo;
+  $("#voltBar").classList.toggle("off",!vo);
+  $("#hideChk").checked=hideVolt;
+  $("#hideSub").textContent=hideVolt?hidden+"盤を非表示中":"すべて表示中";
+  pushSoon();
+}
+
+/* ============ ポップアップ ============ */
+function openPop(node,wide){
+  $("#panel").innerHTML="";$("#panel").appendChild(node);
+  $("#panel").classList.toggle("wide",!!wide);
+  $("#pop").classList.add("show");$("#app").classList.add("blurred");
+  document.body.style.overflow="hidden";
+}
+function closePop(){
+  $("#pop").classList.remove("show");$("#app").classList.remove("blurred");
+  document.body.style.overflow="";curItem=null;draw();
+}
+$("#pop").onclick=e=>{if(e.target===$("#pop"))closePop();};
+
+/* ============ メモ（設備異常の記録） ============ */
+const memo={};   /* it.id → {t:"本文", ph:[dataURL,…]} */
+function memoOf(id){return memo[id]||(memo[id]={t:"",ph:[]});}
+function hasMemo(id){const m=memo[id];return !!(m&&(m.t.trim()||m.ph.length));}
+
+/* 写真は長辺1400pxのJPEGに縮めてから持つ（原寸だと端末が落ちる） */
+function shrink(file,max=1400,q=.72){
+  return new Promise(res=>{
+    const fr=new FileReader();
+    fr.onerror=()=>res(null);
+    fr.onload=()=>{
+      const im=new Image();
+      im.onerror=()=>res(fr.result);
+      im.onload=()=>{
+        try{
+          const s=Math.min(1,max/Math.max(im.width,im.height));
+          const w=Math.round(im.width*s),h=Math.round(im.height*s);
+          const c=document.createElement("canvas");c.width=w;c.height=h;
+          c.getContext("2d").drawImage(im,0,0,w,h);
+          res(c.toDataURL("image/jpeg",q));
+        }catch(e){res(fr.result);}
+      };
+      im.src=fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+/* 日報に貼る1行ぶんの文面 */
+function memoText(it){
+  const m=memo[it.id];
+  if(!m||(!m.t.trim()&&!m.ph.length))return "";
+  const L=[`${info.date}　姪浜駅　${it.sym}（${it.nm}）`];
+  if(m.t.trim())L.push(m.t.trim());
+  if(m.ph.length)L.push(`写真 ${m.ph.length}枚`);
+  return L.join("\n");
+}
+
+function openMemo(it){
+  const m=memoOf(it.id);
+  const frag=document.createDocumentFragment();
+  const head=el("div","phead",
+    `<div class="sym gc${it.g}">${symHTML(it.sym)} メモ</div><div class="nm">${it.nm}</div>`);
+  const x=el("button","x","×");x.onclick=closePop;head.appendChild(x);
+  head.style.position="sticky";frag.appendChild(head);
+
+  const body=el("div","pbody");
+  const fld=el("div","fld");
+  fld.appendChild(el("div","lbl","異常の内容・処置"));
+  const ta=document.createElement("textarea");ta.rows=5;ta.value=m.t;
+  ta.placeholder="例）異音あり。ベルト緩みを確認、次回交換予定。";
+  ta.oninput=()=>{m.t=ta.value;saveSoon();};
+  fld.appendChild(ta);
+  body.appendChild(fld);
+
+  body.appendChild(el("div","lbl","写真"));
+  const grid=el("div","mgrid");
+  const file=document.createElement("input");
+  file.type="file";file.accept="image/*";file.multiple=true;file.style.display="none";
+  file.onchange=async()=>{
+    const fs=[...file.files];file.value="";
+    for(const f of fs){const d=await shrink(f);if(d)m.ph.push(d);}
+    savePhotosSoon();saveSoon();openMemo(it);
+  };
+  body.appendChild(file);
+
+  m.ph.forEach((src,i)=>{
+    const t=el("div","thumb");
+    const im=document.createElement("img");im.src=src;t.appendChild(im);
+    const d=el("button","del","×");
+    d.onclick=e=>{e.stopPropagation();m.ph.splice(i,1);savePhotosSoon();saveSoon();openMemo(it);};
+    t.appendChild(d);
+    grid.appendChild(t);
+  });
+  const add=el("button","addPh","＋<br>写真");
+  add.type="button";add.onclick=()=>file.click();
+  grid.appendChild(add);
+  body.appendChild(grid);
+
+  body.appendChild(el("div","mhint",
+    "写真はカメラ撮影・ライブラリのどちらからでも選べます。リロードすると点検値と一緒に消えるので、その日のうちに転記してください。"));
+  frag.appendChild(body);
+
+  const foot=el("div","pfoot");
+  const b=el("button","btn","日報にコピー");
+  b.onclick=async()=>{
+    const txt=memoText(it);
+    if(!txt){b.textContent="メモが空です";setTimeout(()=>b.textContent="日報にコピー",1600);return;}
+    try{await navigator.clipboard.writeText(txt);b.textContent="コピーしました";}
+    catch(e){b.textContent="コピーできません";}
+    setTimeout(()=>b.textContent="日報にコピー",1600);
+  };
+  foot.appendChild(b);
+  const c=el("button","btn ghost","閉じる");c.onclick=closePop;
+  foot.appendChild(c);
+  frag.appendChild(foot);
+  openPop(frag);
+}
+
+/* ===== 備考は最後の欄が埋まったら次を足す（備考2→3→4…） ===== */
+const RM_MIN=2;
+const rmFilled=(it,f)=>String(val[it.id+"."+f.id]||"").trim()!=="";
+function growRemarks(it,addField){
+  if(it.id!=="rm")return;
+  const last=it.f[it.f.length-1];
+  if(!last||last.t!=="text"||!rmFilled(it,last))return;
+  const n=it.f.length+1;
+  const f={id:"r"+n,lab:"備考 "+n,t:"text",prev:""};
+  it.f.push(f);val[it.id+"."+f.id]="";
+  addField(f,it.f.length-1);
+}
+/* 開き直したとき、末尾の空欄は1つ残して片づける */
+function trimRemarks(it){
+  if(it.id!=="rm")return;
+  while(it.f.length>RM_MIN&&!rmFilled(it,it.f[it.f.length-1])){
+    delete val[it.id+"."+it.f.pop().id];
+  }
+}
+
+/* ============ 場所（ピン打ち済みの図面をドライブで開く） ============ */
+/* ↓ 図面フォルダのURL。どの設備からでもここが開きます */
+const DWG_FOLDER="";
+/* ↓ 設備ごとに図面を分けたくなったら、ここに足すとそちらが優先されます
+   例： mac21:"https://drive.google.com/file/d/xxxx/view" */
+const DWG={};
+
+function dwgButton(it,fld){
+  const b=el("button","dwg","📍<br>場所");b.type="button";
+  const hint=el("div","camMsg");fld.appendChild(hint);
+  b.onclick=()=>{
+    const url=DWG[it.id]||DWG_FOLDER;
+    if(!url){
+      hint.textContent="図面の保存先が未設定です。ドライブのフォルダURLを登録すると開けるようになります。";
+      hint.classList.add("show");return;
+    }
+    hint.classList.remove("show");
+    window.open(url,"_blank","noopener");
+  };
+  return b;
+}
+
+/* ============ メーター読み取り（写真→AI→数値） ============ */
+/* ↓ Cloudflare Worker を立てたら、そのURLをここに入れるだけで動きます。
+   空のままなら「読み取り先が未設定」と出るだけで、手入力の邪魔はしません。 */
+const OCR_ENDPOINT="";
+/* 読み取りを付ける項目。現場ごとにメーターが違うので、まずは数字がそのまま並ぶ2つだけ */
+const OCR_TYPES=["hour","kwh"];
+
+/* 前回値から桁の形を作る。「5桁＋小数1桁」と先に教えると誤読が激減する */
+function digitHint(f){
+  const [a,b]=String(f.prev).split(".");
+  return `整数${a.replace("-","").length}桁`+(b?`＋小数${b.length}桁`:"（小数なし）");
+}
+async function readMeter(it,f,dataURL){
+  if(!OCR_ENDPOINT)throw new Error("未設定");
+  const r=await fetch(OCR_ENDPOINT,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      item:it.sym,label:f.lab,unit:f.unit||"",prev:f.prev,
+      format:digitHint(f),image:dataURL
+    })
+  });
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  const raw=await r.text();
+  let t=raw;
+  try{const j=JSON.parse(raw);t=j.value??j.text??j.result??raw;}catch(e){}
+  const n=String(t).replace(/[^0-9.\-]/g,"");
+  if(n===""||isNaN(parseFloat(n)))throw new Error("数値を読めません");
+  return n;
+}
+function camButton(it,f,input,fld){
+  const b=el("button","cam","📷<br>AI");b.type="button";
+  const pane=el("div","campane");fld.appendChild(pane);
+  const hint=el("div","camMsg");fld.appendChild(hint);
+  const say=t=>{hint.textContent=t;hint.classList.add("show");};
+  const clear=()=>hint.classList.remove("show");
+  let shot=null;
+
+  const file=document.createElement("input");
+  file.type="file";file.accept="image/*";file.capture="environment";file.style.display="none";
+  file.onchange=async()=>{
+    const f0=file.files[0];file.value="";
+    if(!f0)return;
+    b.disabled=true;b.innerHTML="読込中…";clear();
+    shot=await shrink(f0,1600,.85);
+    b.disabled=false;b.innerHTML="📷<br>AI";
+    render();
+  };
+
+  function render(){
+    pane.innerHTML="";
+    pane.classList.toggle("show",!!shot);
+    if(!shot)return;
+    const im=document.createElement("img");im.src=shot;pane.appendChild(im);
+    pane.appendChild(el("div","camnote","数字がはっきり読めるか確認してから解析してください。"));
+    const rw=el("div","camrow");
+    const again=el("button","mini","撮り直す");again.type="button";again.onclick=()=>{clear();file.click();};
+    const go=el("button","mini go","この写真で解析");go.type="button";
+    go.onclick=async()=>{
+      if(!OCR_ENDPOINT){
+        say("APIキーが未設定です。会社から発行されたら、読み取り先のURLを登録すると使えるようになります。");
+        return;
+      }
+      clear();go.disabled=true;go.textContent="解析中…";
+      try{
+        const n=await readMeter(it,f,shot);
+        input.value=n;input.dispatchEvent(new Event("input"));
+        shot=null;render();
+      }catch(e){
+        say("読み取れませんでした（"+e.message+"）。撮り直すか、手で入力してください。");
+        go.disabled=false;go.textContent="この写真で解析";
+      }
+    };
+    const del=el("button","mini","やめる");del.type="button";
+    del.onclick=()=>{shot=null;clear();render();};
+    rw.appendChild(again);rw.appendChild(go);rw.appendChild(del);
+    pane.appendChild(rw);
+  }
+
+  b.onclick=()=>{clear();file.click();};
+  b.appendChild(file);
+  return b;
+}
+
+let curItem=null;
+function openItem(it,noFocus){
+  curItem=it;
+  const frag=document.createDocumentFragment();
+  const head=el("div","phead hasMemo",`<div class="sym gc${it.g}">${symHTML(it.sym)}</div><div class="nm">${it.nm}</div>`);
+  const mb=el("button","memoBtn"+(hasMemo(it.id)?" on":""),hasMemo(it.id)?"メモ済":"メモ");
+  mb.type="button";mb.onclick=()=>openMemo(it);head.appendChild(mb);
+  const x=el("button","x","×");x.onclick=closePop;head.appendChild(x);
+  head.style.position="sticky";frag.appendChild(head);
+
+  const body=el("div","pbody");
+  if(it.f.some(f=>f.t==="volt")){
+    const on=voltOn([it.id]);
+    const lab=el("label","chk"+(on?"":" off"));
+    const cb=document.createElement("input");cb.type="checkbox";cb.checked=on;
+    cb.onchange=()=>{setVolt(cb.checked,[it.id]);openItem(it);};
+    lab.appendChild(cb);
+    lab.insertAdjacentHTML("beforeend",
+      '<span class="tx">この盤は前回どおり（点検済み）<span class="sub">外すと空欄に戻り、実測値を入力できます</span></span>');
+    body.appendChild(lab);
+  }
+  if(!it.f.length){
+    body.appendChild(el("div","note","この盤は点検表に測定項目がありません。外観確認のみです。"));
+  }
+  const addField=(f,idx)=>{
+    const k=it.id+"."+f.id;
+    const fld=el("div","fld");
+    const meta=f.t==="cur"?`基準 ${f.std} ${f.unit}／前回 ${f.prev}`
+      :f.t==="press"?`基準 ${f.rng[0]}〜${f.rng[1]}／前回 ${f.prev}`
+      :f.t==="kwh"?`前回 ${f.prev.toLocaleString()} ${f.unit}`
+      :f.t==="text"?"":`前回 ${f.prev}${f.unit||""}`;
+    fld.appendChild(el("div","lab",`<b>${f.lab}</b><span>${meta}</span>`));
+
+    if(f.t==="choice"){
+      const ch=el("div","chips");
+      const cmsg=el("div","msg");
+      const paint=()=>{
+        cmsg.className="msg";stat[k]="";
+        if(!val[k]){cmsg.classList.add("show","warn");cmsg.textContent="毎回選択してください。";stat[k]="warn";}
+        else if(val[k]==="不"){cmsg.classList.add("show","fault");
+          cmsg.textContent="「不」を選択しています。処置の内容を備考に記入してください。";stat[k]="fault";}
+      };
+      f.opts.forEach(o=>{
+        const b=el("button","chip",o);b.type="button";
+        b.setAttribute("aria-pressed",val[k]===o);
+        b.onclick=()=>{val[k]=o;mark(k);[...ch.children].forEach(c=>c.setAttribute("aria-pressed",c.textContent===o));paint();byline(fld,k);pushSoon();};
+        ch.appendChild(b);
+      });
+      fld.appendChild(ch);fld.appendChild(cmsg);paint();byline(fld,k);
+    }else if(f.t==="text"){
+      const t=document.createElement("textarea");t.rows=3;t.value=val[k]||"";
+      t.placeholder=f.id==="r1"?"":"異常・処置・引継ぎ事項";
+      t.dataset.key=k;
+      t.oninput=()=>{val[k]=t.value;mark(k);pushSoon();growRemarks(it,addField);};
+      fld.appendChild(t);
+    }else{
+      const row=el("div","row");
+      const i=document.createElement("input");
+      i.type="number";i.inputMode="decimal";i.step="any";i.placeholder="—";i.value=val[k]||"";
+      row.appendChild(i);
+      if(f.unit)row.appendChild(el("div","unit",f.unit));
+      if(f.t==="volt"||f.t==="temp"){
+        const b=el("button","same","前回どおり<br>"+f.prev);b.type="button";
+        b.onclick=()=>{i.value=f.prev;i.dispatchEvent(new Event("input"));};
+        row.appendChild(b);
+      }
+      row.appendChild(dwgButton(it,fld));
+      if(OCR_TYPES.includes(f.t)){
+        row.appendChild(camButton(it,f,i,fld));
+      }
+      fld.appendChild(row);
+      const msg=el("div","msg");fld.appendChild(msg);
+      i.dataset.key=k;
+      const apply=fromUser=>{
+        val[k]=i.value;stat[k]="";msg.className="msg";
+        if(fromUser)mark(k);
+        const v=nz(i.value);
+        if(v!==null){
+          const r=check(f,v);
+          if(r){msg.classList.add("show",r.lv);msg.textContent=r.tx;if(r.lv!=="ok")stat[k]=r.lv;}
+        }
+        i.classList.remove("ok","warn","bad");
+        if(i.value!==""&&v!==null)i.classList.add(stat[k]==="fault"?"bad":stat[k]==="warn"?"warn":"ok");
+        byline(fld,k);
+      };
+      i.addEventListener("input",()=>{apply(true);pushSoon();});apply(false);
+      if(idx===0&&!noFocus)setTimeout(()=>i.focus(),120);
+    }
+    const hs=series(k);
+    if(hs&&hs.some(x=>x.v!==null&&x.v!==undefined))fld.appendChild(histStrip(hs,f));
+    body.appendChild(fld);
+  };
+  trimRemarks(it);
+  it.f.forEach(addField);
+  frag.appendChild(body);
+
+  const foot=el("div","pfoot");
+  const idx=ITEMS.indexOf(it), next=ITEMS.slice(idx+1).find(n=>n.f.length);
+  const done=el("button","btn","確定して一覧へ");done.onclick=closePop;
+  foot.appendChild(done);
+  if(next){
+    const nx=el("button","btn ghost","次へ ›");
+    nx.onclick=()=>{draw();openItem(next);};
+    foot.appendChild(nx);
+  }
+  frag.appendChild(foot);
+  openPop(frag);
+}
+
+
+
+/* 誰が入れたかの表示 */
+function byline(fld,k){
+  let b=fld.querySelector(".byline");
+  const m=meta[k];
+  if(!m||!m.by||m.by==="—"||m.by===me()||!has(k)){if(b)b.remove();return;}
+  if(!b){b=el("div","byline");fld.appendChild(b);}
+  const t=new Date(m.at);
+  b.textContent=`${m.by}さんが入力（${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}）`;
+}
+
+/* ============ 履歴の表示 ============ */
+/* 前回からの増加ぶんを併記する項目の種類と、下段の呼び名 */
+const DELTA_LABEL={hour:"前回からの稼働時間",kwh:"前回からの使用電力量"};
+/* 1週間の稼働上限の目安（H）。これを超えたら橙 */
+const HOUR_CAP=168;
+/* 差の書き方：時間は小数1桁、電力量は3桁区切り（端数があれば1桁だけ残す） */
+function deltaFmt(t,a){
+  if(t==="hour")return a.toFixed(1);
+  const r=Math.round(a*10)/10;
+  return Number.isInteger(r)?r.toLocaleString():r.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1});
+}
+function deltaLine(f,arr,i){
+  if(!DELTA_LABEL[f.t])return null;
+  const v=arr[i],p=i>0?arr[i-1]:null;
+  if(typeof v!=="number")return null;
+  if(typeof p!=="number")return{tx:"—",cls:""};
+  const d=v-p;
+  const tx=(d>=0?"+":"−")+deltaFmt(f.t,Math.abs(d));
+  if(d<0)return{tx,cls:"minus"};
+  if(f.t==="hour"&&d>HOUR_CAP)return{tx,cls:"over"};
+  return{tx,cls:d>0?"up":""};
+}
+
+function histStrip(hs,f){
+  const box=el("div","hist");
+  box.appendChild(el("div","hl",DELTA_LABEL[f.t]
+    ?"過去の点検値（新しい順に右）／下段は"+DELTA_LABEL[f.t]
+    :"過去の点検値（新しい順に右）"));
+  const nums=hs.map(x=>typeof x.v==="number"?x.v:null).filter(x=>x!==null);
+  if(nums.length>2){
+    const mn=Math.min(...nums),mx=Math.max(...nums),W=300,H=34,pad=3;
+    const pts=hs.map((x,i)=>{
+      if(typeof x.v!=="number")return null;
+      const px=pad+i*(W-pad*2)/(hs.length-1);
+      const py=mx===mn?H/2:H-pad-((x.v-mn)/(mx-mn))*(H-pad*2);
+      return px.toFixed(1)+","+py.toFixed(1);
+    }).filter(Boolean);
+    const svg=`<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`+
+      `<polyline points="${pts.join(" ")}" fill="none" stroke="#1F1E1C" stroke-width="1" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`+
+      `<circle cx="${pts[pts.length-1].split(",")[0]}" cy="${pts[pts.length-1].split(",")[1]}" r="2.2" fill="#1F1E1C"/></svg>`;
+    box.insertAdjacentHTML("beforeend",svg);
+  }
+  const sc=el("div","hscroll");
+  const arr=hs.map(y=>y.v);
+  hs.forEach((x,i)=>{
+    const c=el("div","hcell");
+    if(i===hs.length-1)c.classList.add("last");
+    if(badHist(f,arr,i))c.classList.add("bad");
+    let h=`<div class="d">${x.d}</div><div class="n">${x.v===null||x.v===undefined?"—":x.v}</div>`;
+    const dl=deltaLine(f,arr,i);
+    if(dl)h+=`<div class="dl ${dl.cls}">${dl.tx}</div>`;
+    c.innerHTML=h;
+    sc.appendChild(c);
+  });
+  box.appendChild(sc);
+  setTimeout(()=>{sc.scrollLeft=sc.scrollWidth;},60);
+  return box;
+}
+
+/* ============ 履歴の一覧表 ============ */
+const TABLE=[
+ ["電流（A）",["mac21.a","sf21.a","ef21.a","sf31.a","ef31.a","ac41.a","tp.a","sf.a","ef.a"]],
+ ["冷媒圧力（Mpa）",["prs1.h","prs1.l","prs2.h","prs2.l","prs3.h","prs3.l"]],
+ ["積算時間（H）",["mac21.h","sf21.h","ef21.h","sf31.h","ef31.h","ac41.h","pac71.h","pac73.h","pac72.h","pac74.h","tp.h","sf.h","ef.h"]],
+ ["積算電力量（kWh）",["kw1.v","kw2.v","kw3.v","kw4.v","kw5.v","kw6.v"]],
+ ["設定温度（℃）",["temp.t12","temp.t34"]]
+];
+function labelOf(key){
+  const [iid,fid]=key.split(".");
+  const it=ITEMS.find(x=>x.id===iid),f=it.f.find(x=>x.id===fid);
+  return it.sym+(it.f.length>1?"　"+f.lab:"");
+}
+function fieldOf(key){
+  const [iid,fid]=key.split(".");
+  const it=ITEMS.find(x=>x.id===iid);return it.f.find(x=>x.id===fid);
+}
+function openHistory(){
+  const frag=document.createDocumentFragment();
+  const head=el("div","phead",'<div class="sym">点検値の履歴</div><div class="nm">姪浜駅　No.1〜14</div>');
+  const x=el("button","x","×");x.onclick=closePop;head.appendChild(x);frag.appendChild(head);
+  const body=el("div","pbody");
+  body.appendChild(el("div","swipehint","表を横になぞると、古い回まで見られます。"));
+
+  let h="<div class='scrollx'><table class='tbl'><tbody>";
+  TABLE.forEach(([gname,ks])=>{
+    h+=`<tr class='grp'><td class='h'>${gname}</td>`;
+    HIST.forEach(r=>h+=`<td>${r.d}</td>`);
+    h+="<td>今回</td></tr>";
+    ks.forEach(k=>{
+      const f=fieldOf(k),hs=series(k),arr=hs.map(v=>v.v);
+      h+=`<tr><td class='h'>${labelOf(k)}</td>`;
+      hs.forEach((p,i)=>{
+        h+=`<td class='${badHist(f,arr,i)?"bad":""}'>${p.v===null||p.v===undefined?"—":p.v}</td>`;
+      });
+      const now=val[k];
+      h+=`<td class='now'>${now===undefined||now===""?"—":now}</td></tr>`;
+    });
+  });
+  h+="</tbody></table></div>";
+  body.insertAdjacentHTML("beforeend",h);
+  body.insertAdjacentHTML("beforeend",
+    "<div class='note' style='margin-top:12px'>各盤の電圧は No.1〜14 のあいだ 440V／100V で変動がないため、この表からは省いています。橙色は前の回から減っている、または基準値の範囲外です。</div>");
+  frag.appendChild(body);
+  const foot=el("div","pfoot");
+  const cb=el("button","btn","閉じる");cb.onclick=closePop;foot.appendChild(cb);
+  frag.appendChild(foot);
+  openPop(frag,true);
+  const sc=$("#panel").querySelector(".scrollx");
+  if(sc)sc.scrollLeft=sc.scrollWidth;
+}
+
+/* ============ 点検情報 ============ */
+$("#infoBar").onclick=()=>{
+  const frag=document.createDocumentFragment();
+  const head=el("div","phead",'<div class="sym">点検情報</div><div class="nm">日付・時刻・点検者</div>');
+  const x=el("button","x","×");x.onclick=closePop;head.appendChild(x);frag.appendChild(head);
+  const body=el("div","pbody");
+  const d=el("div");d.style.marginBottom="12px";
+  d.appendChild(el("div","lbl","点検日"));
+  const di=document.createElement("input");di.type="date";di.value=info.date;di.oninput=()=>{info.date=di.value;saveSoon();};
+  d.appendChild(di);body.appendChild(d);
+  const n=el("div");n.style.marginBottom="14px";n.style.maxWidth="150px";
+  n.appendChild(el("div","lbl","点検表 No."));
+  const ni=document.createElement("input");ni.type="number";ni.inputMode="numeric";ni.value=info.no;ni.oninput=()=>{info.no=ni.value;saveSoon();};
+  n.appendChild(ni);body.appendChild(n);
+  body.appendChild(el("div","lbl","時刻"));
+  const ch=el("div","chips");ch.style.marginBottom="14px";
+  TIMES.forEach(t=>{const b=el("button","chip",t);b.type="button";b.setAttribute("aria-pressed",info.time===t);
+    b.onclick=()=>{info.time=t;[...ch.children].forEach(c=>c.setAttribute("aria-pressed",c.textContent===t));saveSoon();};
+    ch.appendChild(b);});
+  body.appendChild(ch);
+  const p2=el("div","pair");
+  [["点検者 A（自分）","whoA"],["点検者 B（相方）","whoB"]].forEach(([lb,key])=>{
+    const w=el("div");w.appendChild(el("div","lbl",lb));
+    const s=document.createElement("select");s.appendChild(new Option("選択",""));
+    INSPECTORS.forEach(i=>s.appendChild(new Option(i,i)));
+    s.value=info[key];s.onchange=()=>{info[key]=s.value;saveSoon();};
+    w.appendChild(s);p2.appendChild(w);
+  });
+  body.appendChild(p2);
+  frag.appendChild(body);
+  const foot=el("div","pfoot");
+  const rs=el("button","btn ghost","やり直す");
+  rs.onclick=()=>{if(!confirm("入力した数値をすべて消します。よろしいですか。"))return;
+    keys.forEach(k=>{val[k]="";stat[k]="";});closePop();};
+  const b=el("button","btn","確定して一覧へ");b.onclick=closePop;
+  foot.appendChild(rs);foot.appendChild(b);
+  frag.appendChild(foot);
+  openPop(frag);
+};
+
+/* ============ 共同編集（2人で1枚を埋める） ============ */
+const SYNC=false;   /* true にすると2台同期が復活（アプリの確認ダイアログが出ます） */
+const KEY="meinohama:sheet";
+function me(){return info.whoA||"";}
+function mark(k){meta[k]={by:me()||"—",at:Date.now()};saveSoon();}
+let pushTmr=null;
+function pushSoon(){if(!SYNC)return;clearTimeout(pushTmr);pushTmr=setTimeout(sync,700);}
+function focusedKey(){
+  const a=document.activeElement;
+  return a&&a.dataset?a.dataset.key:null;
+}
+let syncing=false;
+async function sync(){
+  if(!SYNC||!window.storage||syncing)return;
+  syncing=true;
+  let rem={f:{},p:{}};
+  try{const r=await window.storage.get(KEY,true);if(r)rem=JSON.parse(r.value)||{};}catch(e){}
+  rem.f=rem.f||{};rem.p=rem.p||{};
+  const fk=focusedKey();
+  let pulled=false,push=false;
+  Object.keys(rem.f).forEach(k=>{
+    if(k===fk)return;
+    const r=rem.f[k],l=meta[k];
+    if(!l||r.at>l.at){
+      if(val[k]!==r.v){val[k]=r.v;pulled=true;}
+      meta[k]={by:r.by,at:r.at};
+    }
+  });
+  Object.keys(meta).forEach(k=>{
+    const l=meta[k],r=rem.f[k];
+    if(!r||l.at>r.at){rem.f[k]={v:val[k]===undefined?"":val[k],by:l.by,at:l.at};push=true;}
+  });
+  const n=me();
+  if(n){rem.p[n]=Date.now();push=true;}
+  if(push){try{await window.storage.set(KEY,JSON.stringify(rem),true);}catch(e){}}
+  syncing=false;
+  if(pulled){
+    Object.keys(val).forEach(k=>{
+      const f=fieldByKey(k);
+      if(!f)return;
+      stat[k]="";
+      const v=nz(val[k]);
+      if(v!==null){const r=check(f,v);if(r&&r.lv!=="ok")stat[k]=r.lv;}
+      if(f.t==="choice"&&!val[k])stat[k]="warn";
+      if(f.t==="choice"&&val[k]==="不")stat[k]="fault";
+    });
+    if(curItem&&!fk)openItem(curItem,true);else draw();
+  }
+  paintBuddy(rem);
+}
+function fieldByKey(k){
+  const [iid,fid]=k.split(".");
+  const it=ITEMS.find(x=>x.id===iid);
+  return it?it.f.find(x=>x.id===fid):null;
+}
+function paintBuddy(rem){
+  const n=me();
+  const others=[...new Set(Object.keys(rem.f||{}).map(k=>rem.f[k].by).filter(b=>b&&b!=="—"&&b!==n))];
+  Object.keys(rem.p||{}).forEach(p=>{if(p!==n&&Date.now()-rem.p[p]<3600000&&!others.includes(p))others.push(p);});
+  const bar=$("#buddyBar"),txt=$("#buddyTxt");
+  if(!others.length){bar.classList.add("off");txt.textContent="相方の入力を待っています";return;}
+  const name=others[0];
+  const cnt=keys.filter(k=>has(k)&&meta[k]&&meta[k].by===name).length;
+  const last=ITEMS.slice().reverse().find(it=>it.f.some(f=>meta[it.id+"."+f.id]&&meta[it.id+"."+f.id].by===name));
+  bar.classList.remove("off");
+  txt.innerHTML=`<b>${name}</b> さん　${cnt} 項目を入力`+(last?`　最後：${last.sym}`:"");
+}
+if(SYNC){setInterval(sync,3000);sync();}
+else{const bb=$("#buddyBar");if(bb)bb.style.display="none";}
+if(SYNC){const bb=$("#buddyBar");if(bb)bb.style.display="";}
+
+/* ============ 出力 ============ */
+const g=k=>val[k]!==undefined?val[k]:"";
+$("#btnOut").onclick=()=>{
+  const r1=[info.no,info.whoA,info.whoB,info.date,"",info.time,
+    g("mac21.a"),g("sf21.a"),g("ef21.a"),g("sf31.a"),g("ef31.a"),g("ac41.a"),g("tp.a"),g("sf.a"),g("ef.a"),
+    g("prs1.h"),g("prs1.l"),g("prs2.h"),g("prs2.l"),g("prs3.h"),g("prs3.l"),
+    g("temp.t12"),g("temp.t34"),
+    g("p1.rs"),g("p1.st"),g("p1.tr"),g("p3.rs"),g("p3.st"),g("p3.tr"),
+    g("dkan.rs"),g("dkan.st"),g("dkan.tr"),g("p5.rs"),g("p5.st"),g("p5.tr"),
+    g("dpan.v"),g("dpan.fs"),g("kasen.rs"),g("kasen.st"),g("kasen.tr")];
+  const r2=["mac21","sf21","ef21","sf31","ef31","ac41","pac71","pac73","pac72","pac74","tp","sf","ef"].map(i=>g(i+".h"));
+  const r3=["kw1","kw2","kw3","kw4","kw5","kw6"].map(i=>g(i+".v"));
+  const issues=[];
+  if(!g("dpan.fs"))issues.push("【要確認】排水 動力盤 FS動作確認が未選択です");
+  ITEMS.forEach(it=>it.f.forEach(f=>{const k=it.id+"."+f.id;
+    if(stat[k]==="fault")issues.push("【要確認】"+it.sym+" "+f.lab);
+    else if(stat[k]==="warn")issues.push("【注意】"+it.sym+" "+f.lab);}));
+  const done=keys.filter(has).length;
+
+  const frag=document.createDocumentFragment();
+  const head=el("div","phead",'<div class="sym">転記用データ</div><div class="nm">タブ区切り／該当行の先頭セルに貼り付け</div>');
+  const x=el("button","x","×");x.onclick=closePop;head.appendChild(x);frag.appendChild(head);
+  const body=el("div","pbody");
+  const blocks=[["01 空調電流・圧力（A列から）",r1.join("\t")],
+                ["02 空調積算時間（G列から）",r2.join("\t")],
+                ["03 空調・ポンプ積算電力（G列から）",r3.join("\t")]];
+  blocks.forEach(([lb,txt],i)=>{
+    body.appendChild(el("div","out-lbl",lb));
+    const pre=el("pre","out",txt||"（未入力）");pre.id="o"+i;body.appendChild(pre);
+    const b=el("button","mini","この行をコピー");
+    b.onclick=async()=>{try{await navigator.clipboard.writeText(txt);b.textContent="コピーしました";
+      setTimeout(()=>b.textContent="この行をコピー",1600);}catch(e){b.textContent="長押しで選択";}};
+    body.appendChild(b);
+  });
+  body.appendChild(el("div","out-lbl","04 入力内容の確認"));
+  body.appendChild(el("pre","out",
+`点検表 No.${info.no}　${info.date} ${info.time}
+点検者　${info.whoA||"—"}／${info.whoB||"—"}
+入力済み　${done} / ${keys.length} 項目
+FS動作確認　${g("dpan.fs")||"未選択"}
+備考　${(ITEMS.find(x=>x.id==="rm")||{f:[]}).f.map(f=>g("rm."+f.id)).filter(s=>s).join("／")}
+
+`+(issues.length?[...new Set(issues)].join("\n"):"警告・エラーはありません。")));
+  frag.appendChild(body);
+  const foot=el("div","pfoot");
+  const rs=el("button","btn ghost","この点検を消す");
+  rs.onclick=async()=>{
+    if(rs.dataset.armed!=="1"){rs.dataset.armed="1";rs.textContent="本当に消す？";
+      setTimeout(()=>{if(rs.dataset.armed==="1"){rs.dataset.armed="";rs.textContent="この点検を消す";}},4000);return;}
+    await wipeLocal();location.reload();
+  };
+  foot.appendChild(rs);
+  const b=el("button","btn","閉じる");b.onclick=closePop;foot.appendChild(b);
+  frag.appendChild(foot);
+  openPop(frag);
+};
+
+/* ============ 端末に残す（落ちても続きから） ============ */
+/* 文字と数字は localStorage、写真だけ容量の大きい IndexedDB に置く */
+const LS="meinohama:local:v1";
+const DB_NAME="meinohama",DB_STORE="photos";
+var saveTmr=null,phTmr=null;   /* 起動時の setVolt→mark→saveSoon より先に用意しておく */
+function saveSoon(){clearTimeout(saveTmr);saveTmr=setTimeout(saveLocal,400);}
+function savePhotosSoon(){clearTimeout(phTmr);phTmr=setTimeout(savePhotos,300);}
+
+function saveLocal(){
+  try{
+    const rm=ITEMS.find(x=>x.id==="rm");
+    const mt={};Object.keys(memo).forEach(id=>{if(memo[id].t)mt[id]=memo[id].t;});
+    localStorage.setItem(LS,JSON.stringify({
+      v:1,at:Date.now(),info,val,meta,hideVolt,memo:mt,rmN:rm?rm.f.length:2
+    }));
+  }catch(e){}
+}
+function restoreLocal(){
+  let s=null;
+  try{s=JSON.parse(localStorage.getItem(LS)||"null");}catch(e){}
+  if(!s||s.v!==1)return;
+  Object.assign(info,s.info||{});
+  const rm=ITEMS.find(x=>x.id==="rm");
+  if(rm)for(let n=rm.f.length+1;n<=(s.rmN||2);n++)rm.f.push({id:"r"+n,lab:"備考 "+n,t:"text",prev:""});
+  Object.assign(val,s.val||{});
+  Object.assign(meta,s.meta||{});
+  hideVolt=!!s.hideVolt;
+  Object.keys(s.memo||{}).forEach(id=>{memoOf(id).t=s.memo[id];});
+  Object.keys(val).forEach(k=>{
+    const f=fieldByKey(k);if(!f)return;
+    stat[k]="";
+    const v=nz(val[k]);
+    if(v!==null){const r=check(f,v);if(r&&r.lv!=="ok")stat[k]=r.lv;}
+    if(f.t==="choice"&&!val[k])stat[k]="warn";
+    if(f.t==="choice"&&val[k]==="不")stat[k]="fault";
+  });
+}
+
+const idbReq=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+function idb(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(DB_NAME,1);
+    r.onupgradeneeded=()=>{r.result.createObjectStore(DB_STORE);};
+    r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);
+  });
+}
+async function savePhotos(){
+  try{
+    const db=await idb();
+    const st=db.transaction(DB_STORE,"readwrite").objectStore(DB_STORE);
+    st.clear();
+    Object.keys(memo).forEach(id=>{if(memo[id].ph&&memo[id].ph.length)st.put(memo[id].ph,id);});
+  }catch(e){}
+}
+async function loadPhotos(){
+  try{
+    const db=await idb();
+    const st=db.transaction(DB_STORE,"readonly").objectStore(DB_STORE);
+    const ks=await idbReq(st.getAllKeys()),vs=await idbReq(st.getAll());
+    let any=false;
+    ks.forEach((id,i)=>{if(vs[i]&&vs[i].length){memoOf(id).ph=vs[i];any=true;}});
+    if(any)draw();
+  }catch(e){}
+}
+async function wipeLocal(){
+  try{localStorage.removeItem(LS);}catch(e){}
+  try{
+    const db=await idb();
+    db.transaction(DB_STORE,"readwrite").objectStore(DB_STORE).clear();
+  }catch(e){}
+}
+
+$("#btnHist").onclick=openHistory;
+$("#hideChk").onchange=e=>{hideVolt=e.target.checked;draw();saveSoon();};
+$("#voltChk").onchange=e=>{
+  setVolt(e.target.checked);
+  $("#voltBar").classList.toggle("off",!e.target.checked);
+  draw();saveSoon();
+};
+restoreLocal();
+draw();
+loadPhotos();
+</script>
+</body>
+</html>

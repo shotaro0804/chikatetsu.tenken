@@ -232,8 +232,12 @@ input::placeholder{color:#BEBAAE}
 .tip b{color:var(--hi-dim);font-weight:700}
 .tip.item{margin:0 0 14px}
 
-/* ===== 総括（Excel「姪浜総括」と同じ並び。A4横1ページ） ===== */
-/* 列幅・行高・結合はExcelの実測値。Excel側は A4横・81%・上下左右中央で組まれている */
+/* ===== 総括（交通局への提出物。Excelの印刷結果と同じに作る） ===== */
+/* 寸法はすべて、実際に提出しているPDFから測った値
+   表の外形 259.2mm × 178.8mm（罫線の中心どうし）／ 用紙 A4横1ページ
+   罫線 thin 0.72pt・medium 1.56pt（黒）／ 塗りなし
+   文字 ＭＳ 明朝・ＭＳ Ｐ明朝／ 12.96 11.40 8.88 8.16 7.32pt
+   Excelの縦位置の既定は下揃え。center指定のセルだけ中央 */
 .rep .repnote{font-size:11.5px;line-height:1.6;color:var(--muted);margin-top:8px}
 .repwarn{border:1.5px solid var(--warn);background:#FDF6EA;border-radius:8px;
   padding:9px 11px;font-size:12.5px;line-height:1.7;margin-bottom:10px}
@@ -248,42 +252,52 @@ input::placeholder{color:#BEBAAE}
 .panel.xlwide{max-width:min(98vw,1120px)}
 .shwrap{overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch;
   border:1px solid var(--line);border-radius:8px;background:var(--white)}
-.sheet{width:277mm;padding:4mm 3mm;background:var(--white)}
-table.xl{width:100%;border-collapse:collapse;table-layout:fixed;
-  font-family:var(--jp);font-size:8pt;color:var(--ink)}
-table.xl td{border:.5pt solid #D3CFC2;padding:0 1.1mm;white-space:nowrap;
-  overflow:hidden;line-height:1.15;vertical-align:middle}
-/* 見出し */
-table.xl td.hd{background:#F0EEE6;color:#6C6A62;font-size:7pt;font-weight:700;text-align:center;
-  letter-spacing:.02em}
-table.xl td.band{background:#E8E3D7;color:var(--ink);font-size:8pt;font-weight:700;
-  text-align:center;letter-spacing:.06em}
-/* 帳票の外（表題・年度・点検日・No.） */
-table.xl td.ttl{border:0;font-size:11.5pt;font-weight:700;letter-spacing:.01em}
-table.xl td.mlab{border:0;font-size:7.5pt;color:#6C6A62;text-align:right;padding-right:1.5mm}
-table.xl td.mval{border:0;font-family:var(--mono);font-size:10pt;font-weight:700;text-align:left}
-table.xl td.mval.c{text-align:center}
-/* 本文 */
-table.xl td.sy{font-size:8pt;font-weight:700;padding:0 .3mm;text-align:justify;text-align-last:justify;
-  -webkit-text-align-last:justify}
-table.xl td.sy.s10{font-size:7.3pt}   /* ＰＡＣ－７１ など（Excel 10pt） */
-table.xl td.sy.s9{font-size:6.5pt}    /* ＭＡＣ－２１（Excel 9pt） */
-table.xl td.nm{font-size:8pt}
-table.xl td.n{font-family:var(--mono);font-size:8.5pt;font-weight:700;text-align:right;
-  font-variant-numeric:tabular-nums}
-table.xl td.std{font-family:var(--mono);font-size:8pt;font-weight:400;color:#9C9788;text-align:right}
-table.xl td.ctr{text-align:center}
-table.xl td.rmk{font-size:8pt;text-align:left}
-table.xl td.hd.rmk{font-size:6.5pt;text-align:left}  /* 冷媒圧力の名称（Excel 9pt） */
-table.xl td.miss{color:var(--fault)}
-table.xl td.warn{color:var(--warn)}
-table.xl td.fault{color:var(--fault)}
-table.xl td.void{border:0;background:transparent}
+.sheet{width:265mm;padding:2.9mm;background:#fff}
 .swipe2{font-size:11.5px;color:var(--muted);margin-bottom:6px}
+
+table.xl{width:259.2mm;border-collapse:collapse;table-layout:fixed;background:#fff;color:#000;
+  font-family:"ＭＳ 明朝","MS Mincho","Hiragino Mincho ProN","YuMincho","Yu Mincho",serif;
+  font-size:8.88pt;font-weight:400;line-height:1.08;letter-spacing:0;
+  font-variant-east-asian:normal;font-feature-settings:normal}
+table.xl td{padding:0 .43mm .2mm;border:0 solid #000;background:none;
+  white-space:nowrap;overflow:visible;vertical-align:bottom;text-align:left}
+/* 書体（ＭＳ Ｐ明朝は記号・冷媒名称のセル。ＭＳ 明朝はiOSに無いので順に代替する） */
+table.xl td.pm{font-family:"ＭＳ Ｐ明朝","MS PMincho","Hiragino Mincho ProN","YuMincho","Yu Mincho",serif}
+table.xl td.pg{font-family:"ＭＳ Ｐゴシック","MS PGothic","Hiragino Sans","Yu Gothic",sans-serif}
+table.xl td.bd{font-weight:700}
+/* 文字サイズ（Excel 16 / 14 / 10 / 9pt。既定の11ptは8.88pt） */
+table.xl td.s1296{font-size:12.96pt;line-height:1}
+table.xl td.s114{font-size:11.4pt;line-height:1.04}
+table.xl td.s816{font-size:8.16pt}
+table.xl td.s732{font-size:7.32pt}
+/* 横位置（ad＝均等割り付け） */
+table.xl td.ac{text-align:center}
+table.xl td.ar{text-align:right}
+table.xl td.al{text-align:left}
+table.xl td.ad{text-align:justify;text-align-last:justify;-webkit-text-align-last:justify}
+/* 縦位置 */
+table.xl td.vc{vertical-align:middle}
+table.xl td.vt{vertical-align:top}
+/* 罫線（1＝thin 0.72pt／2＝medium 1.56pt） */
+table.xl td.t1{border-top-width:.72pt}
+table.xl td.t2{border-top-width:1.56pt}
+table.xl td.r1{border-right-width:.72pt}
+table.xl td.r2{border-right-width:1.56pt}
+table.xl td.b1{border-bottom-width:.72pt}
+table.xl td.b2{border-bottom-width:1.56pt}
+table.xl td.l1{border-left-width:.72pt}
+table.xl td.l2{border-left-width:1.56pt}
+/* 「0_ 」のように末尾へ空白を確保する表示形式。右に空白1文字分あける */
+table.xl td.sp{padding-right:calc(.43mm + .5em)}
+/* 未入力・注意の印。画面で確かめるためだけのもので、印刷では消える */
+table.xl td.miss{background:#FBEDEB;box-shadow:inset 0 0 0 1px #E6B5AE}
+table.xl td.warn{background:#FDF6EA;box-shadow:inset 0 0 0 1px #E3CFA6}
+table.xl td.fault{background:#FBEDEB;box-shadow:inset 0 0 0 1px #E6B5AE}
 
 /* ===== 印刷（総括をA4横1ページで出す） ===== */
 @media print{
-  @page{size:A4 landscape;margin:8mm}
+  /* PDF実測どおり 表の外枠の左上を 上16.17mm・左18.47mm に置く。右下は1ページに収める余裕 */
+  @page{size:A4 landscape;margin:16.17mm 18mm 13mm 18.47mm}
   html,body{background:#fff !important}
   /* openPop が body に付ける overflow:hidden / height を印刷時だけ戻す */
   body{overflow:visible !important;height:auto !important}
@@ -296,7 +310,10 @@ table.xl td.void{border:0;background:transparent}
   .pbody{padding:0}
   .shwrap{overflow:visible;border:0;border-radius:0;background:none}
   .sheet{width:auto;padding:0}
-  table.xl{page-break-inside:avoid}
+  table.xl{page-break-inside:avoid;margin:0}
+  /* 未入力・注意の印は提出物に出さない。中身はExcelと1文字も変えない */
+  table.xl td.miss,table.xl td.warn,table.xl td.fault{
+    background:none !important;box-shadow:none !important;color:#000 !important}
 }
 
 /* ===== チェックボックス ===== */
@@ -1260,59 +1277,49 @@ FS動作確認　${g("dpan.fs")||"未選択"}
   openPop(frag);
 }
 
-/* ============ 総括（Excel「姪浜総括」と同じ並びで出す） ============ */
-/* 「定格」は総括シートF列の値。現場用シートの「基準値」とは別の数字なので混ぜない */
-const RATED={mac21:85,sf21:3,ef21:1.6,sf31:7.5,ef31:7.5,ac41:50.3,
-             pac71:15.1,pac73:15.1,pac72:15.1,pac74:15.1,tp:5.5,sf:1.2,ef:1.2};
-/* 帳票の左側 r7〜r26。Excelの行順そのまま */
-const XL_ROWS=[
- {b:"Ｐ－1",       nm:"動力制御盤",                    volt:"p1"},
- {b:"Ｐ－３",       nm:"動力制御盤",                    volt:"p3"},
- {b:"Ｐ－４",       nm:"動力制御盤"},
- {b:"ＭＡＣ－２１", nm:"駅務室系統空調機",              id:"mac21"},
- {b:"ＳＦ－２１",   nm:"駅務室系統送風機",              id:"sf21"},
- {b:"ＥＦ－２１",   nm:"駅務室系統排風機",              id:"ef21"},
- {b:"",             nm:"電気室換気装置動力制御盤",      volt:"dkan"},
- {b:"ＳＦ－３１",   nm:"電気室送風機",                  id:"sf31"},
- {b:"ＥＦ－３１",   nm:"電気室排風機",                  id:"ef31"},
- {b:"Ｐ－５",       nm:"動力制御盤",                    volt:"p5"},
- {b:"ＡＣ－４１",   nm:"信通機器室空調機　",            id:"ac41"},
- {b:"ＰＡＣ－７１", nm:"ﾎｰﾑｽﾎﾟｯﾄ空調機(1・2番ﾎｰﾑA側)", id:"pac71",noA:1,temp:"temp.t12"},
- {b:"ＰＡＣ－７３", nm:"ﾎｰﾑｽﾎﾟｯﾄ空調機(1・2番ﾎｰﾑB側)", id:"pac73",noA:1},
- {b:"ＰＡＣ－７２", nm:"ﾎｰﾑｽﾎﾟｯﾄ空調機(3・4番ﾎｰﾑA側)", id:"pac72",noA:1,temp:"temp.t34"},
- {b:"ＰＡＣ－７４", nm:"ﾎｰﾑｽﾎﾟｯﾄ空調機(3・4番ﾎｰﾑB側)", id:"pac74",noA:1},
- {b:"",             nm:"排水ﾎﾟﾝﾌﾟ動力制御盤",           volt1:"dpan.v"},
- {b:"ＴＰ",         nm:"排水ﾎﾟﾝﾌﾟ",                     id:"tp"},
- {b:"ＳＦ",         nm:"ﾎﾟﾝﾌﾟ室系統給気ﾌｧﾝ",            id:"sf"},
- {b:"ＥＦ",         nm:"ﾎﾟﾝﾌﾟ室系統排気ﾌｧﾝ",            id:"ef",fs:1},
- {b:"",             nm:"消火栓ﾎﾟﾝﾌﾟ動力制御盤",         volt:"kasen"}
-];
-/* 帳票の右側：各動力盤 積算電力量（総括 L11〜L16） */
-const XL_KW=[
- ["kw1","駅務室系統空調機・室内機等"],
- ["kw2","駅務室系統送風機・排風機・ﾌｨﾙﾀｰ"],
- ["kw3","電気室換気装置動力制御盤　主幹"],
- ["kw4","信通機器室動力制御盤　主幹"],
- ["kw5","排水ﾎﾟﾝﾌﾟ室　主幹"],
- ["kw6","排水ﾎﾟﾝﾌﾟ　　TP"]
-];
-/* Excelの列幅（B〜S）。合計164.31を100%に割る */
-const XL_W=[9,9,20.25,7.63,7.63,9.75,8.13,8.13,8.13,1.88,9,8.38,9.75,8.13,11.63,8.13,11.63,8.13];
+/* ============ 総括（交通局への提出物。Excelの印刷結果をそのまま出す） ============ */
+/* 表そのものは Excel「姪浜総括」B2:S36 の書式から起こしたもの。
+   列幅・行高・罫線・書体・文字サイズは、実際に提出しているPDFの実測値。
+   値の入る場所だけ data-k="キー" の空セルにしてあるので、そこへ入れる。
+   定格（85.0 など）は総括シートF列の値で、Excelに書いてあるとおり埋め込み済み。 */
+const XL_TPL=`<colgroup><col style="width:14.20mm"><col style="width:14.20mm"><col style="width:31.94mm"><col style="width:12.04mm"><col style="width:12.04mm"><col style="width:15.38mm"><col style="width:12.83mm"><col style="width:12.83mm"><col style="width:12.83mm"><col style="width:2.97mm"><col style="width:14.20mm"><col style="width:13.22mm"><col style="width:15.38mm"><col style="width:12.83mm"><col style="width:18.35mm"><col style="width:12.83mm"><col style="width:18.35mm"><col style="width:12.83mm"></colgroup><tr style="height:5.028mm"><td class="s1296">姪浜駅 空調衛生設備点検報告書</td><td class="s1296"></td><td class="s1296"></td><td></td><td></td><td></td><td class="ar"></td><td class="s114 ac" data-k="nendo"></td><td class="s114 al">年度</td><td></td><td class="ac vc t2 r1 b2 l2">点検日</td><td colspan="2" class="ac t2 b2 l1" data-k="date"></td><td class="ac vc t2 r1 b2 l2">時</td><td class="ac t2 r2 b2 l1" data-k="time"></td><td class="ar"></td><td class="ar">No.</td><td class="s114 al" data-k="no"></td></tr><tr style="height:5.028mm"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr style="height:4.254mm"><td colspan="3" rowspan="2" class="ac vc t2 l2">点　検　項　目</td><td colspan="2" class="ac t2 l2">動　力　盤</td><td rowspan="2" class="ac vc t2 r1 l1">運転時間</td><td class="ac t2 l1"></td><td class="ac t2">電　圧　</td><td class="ac t2 r2"></td><td></td><td colspan="4" class="ac vc t2 b2 l2">名　称</td><td class="ac vc t2 l2 sp">高圧基準値</td><td class="ac vc t2 r2 l1">測定値</td><td class="ac vc t2 l2">低圧基準値</td><td class="ac vc t2 r2 l1">測定値</td></tr><tr style="height:4.254mm"><td colspan="2" class="ac b1 l2">電流　（A）</td><td class="ac b1 l1"></td><td class="ac b1">（V）</td><td class="ac r2 b1"></td><td></td><td colspan="3" rowspan="2" class="s732 ad vc t2 l2">ＭＡＣ－２１－０ 冷媒圧力</td><td rowspan="3" class="s732 ac vc t2 r2 l2">Ｍｐａ</td><td rowspan="3" class="ac vc t2">2.62～3.39</td><td class="t2 r2 l1 sp ar" data-k="prs1.h"></td><td rowspan="3" class="ac vc t2">0.60～0.98</td><td class="t2 r2 l1 sp ar" data-k="prs1.l"></td></tr><tr style="height:4.254mm"><td class="ac t1 r1 b2 l2">記　号</td><td colspan="2" class="ac t1 b2 l1">名　称</td><td class="ac t1 r1 b2 l2">測定値</td><td class="ac t1 r1 b2 l1">定　格</td><td class="ac t1 r1 b2 l1">(H)</td><td class="ac t1 r1 b2 l1">RS</td><td class="ac t1 r1 b2 l1">ST</td><td class="ac t1 r2 b2 l1">TR</td><td></td><td class="t1 r2 b1 l1 sp ar" data-k="prs2.h"></td><td class="t1 r2 b1 l1 sp ar" data-k="prs2.l"></td></tr><tr style="height:5.183mm"><td class="pm ad t2 r1 b1 l2">Ｐ－1</td><td class="t2 l1">動力制御盤</td><td class="t2 r2"></td><td class="l2"></td><td class="t2 r1 l1 sp"></td><td class="r1 sp"></td><td class="ac r1 l1 sp" data-k="p1.rs"></td><td class="ac r1 l1 sp" data-k="p1.st"></td><td class="ac r2 l1 sp" data-k="p1.tr"></td><td></td><td colspan="3" class="s732 ad vc t1 b2 l2">ＡＣ－４１　冷媒圧力　</td><td class="t1 r2 b2 l1 sp ar" data-k="prs3.h"></td><td class="t1 r2 b2 l1 sp ar" data-k="prs3.l"></td></tr><tr style="height:5.183mm"><td class="pm ad t2 r1 b1 l2">Ｐ－３</td><td class="t2 b2 l1">動力制御盤</td><td class="t2 r2 b2"></td><td class="t2 b2"></td><td class="t2 r1 b2 l1 sp"></td><td class="t2 r1 b2 l1 sp"></td><td class="ac t2 r1 b2 l1 sp" data-k="p3.rs"></td><td class="ac t2 r1 b2 l1 sp" data-k="p3.st"></td><td class="ac t2 r2 b2 l1 sp" data-k="p3.tr"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr style="height:5.183mm"><td class="pm ad t2 r1 b1 l2">Ｐ－４</td><td class="b1 l1">動力制御盤</td><td class="r2 b1"></td><td class="r1 l2 sp"></td><td class="r1 l1 sp"></td><td class="r1 l1 sp"></td><td class="ac t2 r1 l1 sp"></td><td class="t2 r1 l1 sp"></td><td class="t2 r2 l1 sp"></td><td></td><td colspan="8" class="ac t2 b2 l2">各動力盤積算電力量　(ｋＷｈ)</td></tr><tr style="height:5.183mm"><td class="pm s732 ad t1 r1 b1 l2">ＭＡＣ－２１</td><td class="t1 b1 l1">駅務室系統空調機</td><td class="t1 r2 b1"></td><td class="t1 r1 b1 l2 sp ar" data-k="mac21.a"></td><td class="t1 r1 b1 l1 sp ar">85.0</td><td class="t1 r1 b1 l1 sp ar" data-k="~mac21.h"></td><td class="t1 r1 b1 l1 sp"></td><td class="t1 r1 b1 l1 sp"></td><td class="t1 r2 b1 l1 sp"></td><td></td><td colspan="6" class="ac t2 b1 l2">名称</td><td colspan="2" class="ac t2 b1 l1">使用量</td></tr><tr style="height:5.183mm"><td class="pm ad t1 r1 b1 l2">ＳＦ－２１</td><td class="b1 l1">駅務室系統送風機</td><td></td><td class="t1 r1 l2 sp ar" data-k="sf21.a"></td><td class="t1 r1 b1 sp ar">3.0</td><td class="t1 r1 b1 l1 sp ar" data-k="~sf21.h"></td><td class="t1 r1 b1 l1 sp"></td><td class="t1 r1 b1 l1 sp"></td><td class="t1 r2 b1 l1 sp"></td><td></td><td class="al t1 b1 l2">駅務室系統空調機・室内機等</td><td class="al t1 b1"></td><td class="al t1 b1"></td><td class="al t1 b1"></td><td class="al t1 b1"></td><td class="al t1 r1 b1"></td><td colspan="2" class="ar t1 b1 l1 sp" data-k="~kw1.v"></td></tr><tr style="height:5.183mm"><td class="pm ad t1 r1 l2">ＥＦ－２１</td><td class="t1 l1">駅務室系統排風機</td><td class="t1 b1"></td><td class="t1 r1 l2 sp ar" data-k="ef21.a"></td><td class="t1 r1 b1 l1 sp ar">1.6</td><td class="t1 r1 b1 l1 sp ar" data-k="~ef21.h"></td><td class="t1 r1 b1 l1 sp"></td><td class="t1 r1 b1 l1 sp"></td><td class="t1 r2 b1 l1 sp"></td><td></td><td class="t1 b1 l2">駅務室系統送風機・排風機・ﾌｨﾙﾀｰ</td><td></td><td></td><td></td><td></td><td></td><td colspan="2" class="ar t1 b1 l1 sp" data-k="~kw2.v"></td></tr><tr style="height:5.183mm"><td class="t2 r1 b1 l2"></td><td class="t2 b1 l1">電気室換気装置動力制御盤</td><td class="t2 r2 b1"></td><td class="t2 r1 b1 l2 sp"></td><td class="t2 r1 b1 l1 sp"></td><td class="t2 r1 b1 l1 sp"></td><td class="ac t2 r1 b1 l1 sp" data-k="dkan.rs"></td><td class="ac t2 r1 b1 l1 sp" data-k="dkan.st"></td><td class="ac t2 r2 b1 l1 sp" data-k="dkan.tr"></td><td></td><td class="al t1 b1 l2">電気室換気装置動力制御盤  主幹</td><td class="al t1 b1"></td><td class="al t1 b1"></td><td class="al t1 b1"></td><td class="al t1 b1"></td><td class="al t1 r1 b1"></td><td colspan="2" class="ar t1 b1 l1 sp" data-k="~kw3.v"></td></tr><tr style="height:5.183mm"><td class="pm ad t1 r1 b1 l2">ＳＦ－３１</td><td class="b1 l1">電気室送風機</td><td class="b1"></td><td class="r1 b1 l2 sp ar" data-k="sf31.a"></td><td class="r1 b1 l1 sp ar">7.5</td><td class="t1 r1 b1 l1 sp ar" data-k="~sf31.h"></td><td class="t1 r1 b1 l1 sp"></td><td class="r1 b1 l1 sp"></td><td class="r2 b1 l1 sp"></td><td></td><td class="al t1 b1 l2">信通機器室動力制御盤  主幹</td><td class="al t1 b1"></td><td class="al t1 b1"></td><td class="al t1 b1"></td><td class="al t1 b1"></td><td class="al t1 r1 b1"></td><td colspan="2" class="ar t1 b1 l1 sp" data-k="~kw4.v"></td></tr><tr style="height:5.183mm"><td class="pm ad t1 r1 b1 l2">ＥＦ－３１</td><td>電気室排風機</td><td class="t1 b1"></td><td class="r1 b1 l2 sp ar" data-k="ef31.a"></td><td class="t1 r1 b2 l1 sp ar">7.5</td><td class="t1 r1 b2 l1 sp ar" data-k="~ef31.h"></td><td class="t1 r1 b2 l1 sp"></td><td class="t1 r1 b2 l1 sp"></td><td class="t1 r2 b2 l1 sp"></td><td></td><td colspan="6" class="al t1 b1 l2">排水ﾎﾟﾝﾌﾟ室　主幹</td><td colspan="2" class="ar t1 b1 sp" data-k="~kw5.v"></td></tr><tr style="height:5.183mm"><td class="pm ad t2 r1 b1 l2">Ｐ－５</td><td class="t2 b1 l1">動力制御盤</td><td class="t2 b1"></td><td class="t2 r1 b1 l2 sp"></td><td class="t2 r1 b1 l1 sp"></td><td class="t2 r1 b1 l1 sp"></td><td class="ac t2 r1 b1 l1 sp" data-k="p5.rs"></td><td class="ac t2 r1 b1 l1 sp" data-k="p5.st"></td><td class="ac t2 r2 b1 l1 sp" data-k="p5.tr"></td><td></td><td colspan="6" class="al t1 b2 l2">排水ﾎﾟﾝﾌﾟ　　TP</td><td colspan="2" class="ar t1 b2 l1 sp" data-k="~kw6.v"></td></tr><tr style="height:5.183mm"><td class="pm ad t1 r1 l2">ＡＣ－４１</td><td class="t1 l1">信通機器室空調機　</td><td class="t1"></td><td class="t1 r1 l2 sp ar" data-k="ac41.a"></td><td class="t1 r1 l1 sp ar">50.3</td><td class="t1 r1 l1 sp ar" data-k="~ac41.h"></td><td class="t1 r1 l1 sp"></td><td class="t1 r1 l1 sp"></td><td class="t1 r2 l1 sp"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr style="height:5.183mm"><td class="pm s816 ad t2 r1 b1 l2">ＰＡＣ－７１</td><td class="t2 b1 l1">ﾎｰﾑｽﾎﾟｯﾄ空調機(1・2番ﾎｰﾑA側)</td><td class="t2 b1"></td><td class="t2 r1 b1 l2 sp"></td><td class="t2 r1 b1 l1 sp ar">15.1</td><td class="t2 r1 b1 l1 sp ar" data-k="~pac71.h"></td><td class="t2 r1 b1 l1"></td><td class="t2 r1 b1 l1 sk">設定温度</td><td class="t2 r2 b1 l1 sp ar" data-k="temp.t12"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr><tr style="height:5.183mm"><td class="pm s816 ad t1 r1 b1 l2">ＰＡＣ－７３</td><td class="t1 b1 l1">ﾎｰﾑｽﾎﾟｯﾄ空調機(1・2番ﾎｰﾑB側)</td><td class="t1 b1"></td><td class="t1 r1 b1 l2 sp"></td><td class="t1 r1 b1 l1 sp ar">15.1</td><td class="t1 r1 b1 l1 sp ar" data-k="~pac73.h"></td><td class="t1 r1 b1 l1"></td><td class="t1 r1 b1 l1 sk"></td><td class="t1 r2 b1 l1"></td><td></td><td class="bd ac t2 l2">備　考</td><td class="t2"></td><td class="t2"></td><td class="t2 ar" data-k="prevdate"></td><td class="ac t2">～</td><td class="t2 ar" data-k="curdate"></td><td class="t2">運転時間</td><td class="t2 r2"></td></tr><tr style="height:5.183mm"><td class="pm s816 ad t1 r1 b1 l2">ＰＡＣ－７２</td><td class="t1 b1 l1">ﾎｰﾑｽﾎﾟｯﾄ空調機(3・4番ﾎｰﾑA側)</td><td class="t1 b1"></td><td class="t1 r1 b1 l2 sp"></td><td class="t1 r1 l1 sp ar">15.1</td><td class="t1 r1 l1 sp ar" data-k="~pac72.h"></td><td class="t1 r1 l1"></td><td class="t1 r1 l1 sk">設定温度</td><td class="t1 r2 l1 sp ar" data-k="temp.t34"></td><td></td><td colspan="8" class="l2 sk" data-k="rm1"></td></tr><tr style="height:5.183mm"><td class="pm s816 ad t1 r1 b2 l2">ＰＡＣ－７４</td><td class="t1 b2 l1">ﾎｰﾑｽﾎﾟｯﾄ空調機(3・4番ﾎｰﾑB側)</td><td class="t1 b2"></td><td class="t1 r1 l2 sp"></td><td class="t1 r1 l1 sp ar">15.1</td><td class="t1 r1 l1 sp ar" data-k="~pac74.h"></td><td class="ac t1 r1 l1 sp"></td><td class="ac t1 r1 l1 sp"></td><td class="ac t1 r2 l1 sp"></td><td></td><td colspan="8" class="l2" data-k="rm2"></td></tr><tr style="height:5.183mm"><td class="t2 r1 b1 l2"></td><td class="t2 b1 l1">排水ﾎﾟﾝﾌﾟ動力制御盤</td><td class="t2 b1"></td><td class="t2 r1 b1 l2 sp"></td><td class="t2 r1 b1 l1 sp"></td><td class="t2 r1 b1 l1 sp"></td><td class="ac t2 r1 b1 l1 sp" data-k="dpan.v"></td><td class="t2 b1"></td><td class="t2 r2 b1 l1"></td><td></td><td colspan="8" class="l2 sk" data-k="rm3"></td></tr><tr style="height:5.183mm"><td class="ac t1 r1 b1 l2">ＴＰ</td><td class="t1 b1 l1">排水ﾎﾟﾝﾌﾟ</td><td class="t1 b1"></td><td class="t1 r1 b1 l2 sp ar" data-k="tp.a"></td><td class="t1 r1 b1 l1 sp ar">5.5</td><td class="t1 r1 b1 l1 sp ar" data-k="~tp.h"></td><td class="ac t1 r1 b1 l1"></td><td class="ac t1 r1 b1 l1"></td><td class="t1 r2 b1"></td><td></td><td colspan="8" class="pm l2 sk" data-k="rm4"></td></tr><tr style="height:5.183mm"><td class="ac t1 r1 b1 l2">ＳＦ</td><td class="t1 b1 l1">ﾎﾟﾝﾌﾟ室系統給気ﾌｧﾝ</td><td class="t1 b1"></td><td class="t1 r1 b1 l2 sp ar" data-k="sf.a"></td><td class="t1 r1 b1 l1 sp ar">1.2</td><td class="t1 r1 b1 l1 sp ar" data-k="~sf.h"></td><td class="ac t1 r1 b1 l1 sp"></td><td class="t1 b1"></td><td class="t1 r2 b1 l1"></td><td></td><td colspan="8" class="l2 sk" data-k="rm5"></td></tr><tr style="height:5.222mm"><td class="ac t1 r1 b2 l2">ＥＦ</td><td class="t1 b2 l1">ﾎﾟﾝﾌﾟ室系統排気ﾌｧﾝ</td><td class="t1 b2"></td><td class="t1 r1 b2 l2 sp ar" data-k="ef.a"></td><td class="t1 r1 b2 l1 sp ar">1.2</td><td class="t1 r1 b2 l1 sp ar" data-k="~ef.h"></td><td colspan="2" class="ac t1 b2 l1">FS動作確認</td><td class="ac t1 r2 b2" data-k="dpan.fs"></td><td></td><td colspan="8" class="l2 sk" data-k="rm6"></td></tr><tr style="height:5.222mm"><td class="t2 b2 l2"></td><td class="t2 b2 l1">消火栓ﾎﾟﾝﾌﾟ動力制御盤</td><td class="t2 r2 b2"></td><td class="r1 b2 l2 sp"></td><td class="t2 r1 b2 l1"></td><td class="t2 r1 b2 l1 sp"></td><td class="ac t2 r1 b2 l1 sp" data-k="kasen.rs"></td><td class="ac r1 b2 l1" data-k="kasen.st"></td><td class="ac r2 b2 l1" data-k="kasen.tr"></td><td></td><td colspan="8" class="l2 sk" data-k="rm7"></td></tr><tr style="height:5.222mm"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td colspan="8" class="l2 sk" data-k="rm8"></td></tr><tr style="height:5.222mm"><td class="t2 l2"></td><td class="t2"></td><td class="t2"></td><td class="t2"></td><td class="t2"></td><td class="t2"></td><td class="t2"></td><td class="t2"></td><td class="t2 r2"></td><td></td><td colspan="8" class="l2 sk" data-k="rm9"></td></tr><tr style="height:5.222mm"><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td><td></td><td colspan="8" class="l2 sk" data-k="rm10"></td></tr><tr style="height:5.222mm"><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td><td></td><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td></tr><tr style="height:5.222mm"><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td><td></td><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td></tr><tr style="height:5.222mm"><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td><td></td><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td></tr><tr style="height:5.222mm"><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td><td></td><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td></tr><tr style="height:5.222mm"><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td><td></td><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td></tr><tr style="height:5.222mm"><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td><td></td><td class="l2"></td><td></td><td></td><td></td><td></td><td></td><td></td><td class="r2"></td></tr><tr style="height:5.222mm"><td class="b2 l2"></td><td class="b2"></td><td class="b2"></td><td class="b2 sp"></td><td class="b2 sp"></td><td class="b2 sp"></td><td class="s732 ac vc b2"></td><td class="b2 sp"></td><td class="r2 b2 sp"></td><td></td><td class="b2 l2"></td><td class="b2"></td><td class="b2"></td><td class="b2"></td><td class="b2"></td><td class="b2"></td><td class="b2"></td><td class="r2 b2"></td></tr>`;
+
+/* プレースホルダごとのExcelの表示形式ID（Excelの styles.xml から取った） */
+const XL_FMT={
+ "nendo":"0","date":"31","time":"20","no":"0","prs1.h":"185","prs1.l":"185","prs2.h":"185",
+ "prs2.l":"185","p1.rs":"181","p1.st":"181","p1.tr":"181","prs3.h":"185","prs3.l":"185",
+ "p3.rs":"181","p3.st":"181","p3.tr":"181","mac21.a":"177","~mac21.h":"183","sf21.a":"177",
+ "~sf21.h":"183","~kw1.v":"182","ef21.a":"177","~ef21.h":"183","~kw2.v":"182","dkan.rs":"181",
+ "dkan.st":"181","dkan.tr":"181","~kw3.v":"182","sf31.a":"177","~sf31.h":"183","~kw4.v":"182",
+ "ef31.a":"177","~ef31.h":"183","~kw5.v":"182","p5.rs":"181","p5.st":"181","p5.tr":"181",
+ "~kw6.v":"182","ac41.a":"177","~ac41.h":"183","~pac71.h":"183","temp.t12":"177",
+ "~pac73.h":"183","prevdate":"180","curdate":"180","~pac72.h":"183","temp.t34":"177","rm1":"0",
+ "~pac74.h":"183","rm2":"0","dpan.v":"181","rm3":"0","tp.a":"176","~tp.h":"183","rm4":"0",
+ "sf.a":"176","~sf.h":"183","rm5":"0","ef.a":"177","~ef.h":"183","dpan.fs":"0","rm6":"0",
+ "kasen.rs":"181","kasen.st":"0","kasen.tr":"0","rm7":"0","rm8":"0","rm9":"0","rm10":"0"
+};
 
 const gvn=k=>{const v=val[k];return(v===undefined||v==="")?null:nz(v);};
-const scls=k=>stat[k]==="fault"?"fault":stat[k]==="warn"?"warn":"";
-const d1=v=>(v===null||v===undefined)?"":(Math.round(v*10)/10).toFixed(1);
-const d2=v=>(v===null||v===undefined)?"":(Math.round(v*100)/100).toFixed(2);
-const dI=v=>(v===null||v===undefined)?"":Math.round(v).toLocaleString();
 /* 総括の「運転時間」「使用量」は前回からの差。Excel側は蓄積シートの引き算で出している */
 function diffOf(k){
   const a=gvn(k),f=fieldByKey(k);
   if(a===null||!f||typeof f.prev!=="number")return null;
   return Math.round((a-f.prev)*10)/10;
 }
-function nendo(ds){
+/* Excelの表示形式を当てる。176/177=0.0　181=0　182=#,##0　183=#,##0.0　185=0.00 */
+function xnum(id,n){
+  if(n===null||n===undefined||isNaN(n))return"";
+  const dp=(id==="185")?2:(id==="176"||id==="177"||id==="183")?1:0;
+  let s=Math.abs(n).toFixed(dp);
+  if(id==="182"||id==="183")s=s.replace(/\B(?=(\d{3})+(?!\d))/g,",");
+  return(n<0?"-":"")+s;
+}
+const ZEN="０１２３４５６７８９";
+const zen=s=>String(s).replace(/[0-9]/g,d=>ZEN[+d]);
+/* Excelの I2 は「令和８」のように全角。年度は4月始まり */
+function nendoOf(ds){
   const p=String(ds||"").split("-").map(Number);
-  return p[0]?"令和"+((p[1]>=4?p[0]:p[0]-1)-2018)+"年度":"";
+  return p[0]?"令和"+zen((p[1]>=4?p[0]:p[0]-1)-2018):"";
 }
 function jdate(ds){
   const p=String(ds||"").split("-").map(Number);
@@ -1322,18 +1329,94 @@ function mdOf(ds){
   const p=String(ds||"").split("-").map(Number);
   return p[0]?p[1]+"/"+p[2]:"";
 }
-/* 値セル。未入力は赤、注意・要確認は色を変える */
-function xc(k,txt,cls){
-  if(!has(k))return '<td class="n miss">—</td>';
-  return '<td class="n '+(cls||"")+" "+scls(k)+'">'+txt+'</td>';
+/* 備考は10行ぶん。11行以上あるときは最後の行にまとめる */
+function rmLines(){
+  const rm=ITEMS.find(it=>it.id==="rm")||{f:[]};
+  const a=rm.f.map(f=>val["rm."+f.id]).filter(s=>s&&String(s).trim()).map(s=>String(s).trim());
+  if(a.length>10)a.splice(9,a.length-9,a.slice(9).join("／"));
+  return a;
 }
-const xe=n=>'<td'+(n>1?' colspan="'+n+'"':'')+'></td>';
-const xv=n=>'<td class="void"'+(n>1?' colspan="'+n+'"':'')+'></td>';
+
+/* data-k のセルへ値を入れる。未入力・注意は画面用の印を付けるだけで、文字は変えない */
+function fillSheet(root){
+  const rm=rmLines();
+  const prevD=String((HIST[HIST.length-1]||{}).d||"").replace(/^0/,"").replace("/0","/");
+  root.querySelectorAll("td[data-k]").forEach(td=>{
+    const key=td.dataset.k, id=XL_FMT[key]||"0";
+    let tx="",ak=null;
+    if(key==="nendo")tx=nendoOf(info.date);
+    else if(key==="date")tx=jdate(info.date);
+    else if(key==="time")tx=info.time||"";
+    else if(key==="no")tx=info.no||"";
+    else if(key==="prevdate")tx=prevD;
+    else if(key==="curdate")tx=mdOf(info.date);
+    else if(/^rm\d+$/.test(key))tx=rm[+key.slice(2)-1]||"";
+    else if(key==="dpan.fs"){ak=key;tx=val[ak]||"";}
+    else if(key.charAt(0)==="~"){ak=key.slice(1);tx=xnum(id,diffOf(ak));}
+    else{ak=key;tx=xnum(id,gvn(ak));}
+    td.textContent=tx;
+    if(ak){
+      if(!has(ak))td.classList.add("miss");
+      else if(stat[ak]==="fault")td.classList.add("fault");
+      else if(stat[ak]==="warn")td.classList.add("warn");
+    }
+  });
+}
+
+/* 文字があふれないようにする。
+   Excelは隣が空ならそこまで文字がはみ出して見えるので、そのぶんは許す。
+   それでも入らないときだけ、Excelの「縮小して全体を表示」と同じように文字を小さくする。
+   ＭＳ 明朝が入っている端末では一度も縮まないので、Excelの見た目のまま出る。 */
+function fitSheet(root){
+  const tbl=root.querySelector("table.xl");
+  if(!tbl)return;
+  /* 幅くらべ用の物差し。表と同じ入れ物に置く（パネルの拡大縮小を同じに受けるため） */
+  const m=el("span");
+  m.style.cssText="position:absolute;left:0;top:0;white-space:pre;visibility:hidden;pointer-events:none";
+  tbl.parentNode.appendChild(m);
+  if(!tbl.offsetWidth){m.remove();return;}
+  for(const tr of tbl.rows){
+    const cs=[...tr.cells];
+    cs.forEach((td,i)=>{
+      td.style.fontSize="";
+      const tx=td.textContent;
+      if(!tx)return;
+      const c=getComputedStyle(td);
+      const padL=parseFloat(c.paddingLeft)||0, padR=parseFloat(c.paddingRight)||0;
+      /* 均等割り付けはセルの中で広げる書式なので、隣へはみ出さない */
+      const ad=td.classList.contains("ad");
+      const toL=!ad&&(td.classList.contains("ar")||td.classList.contains("ac"));
+      const toR=!ad&&!td.classList.contains("ar");
+      let room=td.getBoundingClientRect().width;
+      if(toR)for(let j=i+1;j<cs.length&&!cs[j].textContent;j++)room+=cs[j].getBoundingClientRect().width;
+      if(toL)for(let j=i-1;j>=0&&!cs[j].textContent;j--)room+=cs[j].getBoundingClientRect().width;
+      const base=parseFloat(c.fontSize)||12;
+      /* 端末によっては小さい文字の幅が丸められる。大きく測って割り戻すと本当の幅が出る */
+      m.style.font=c.fontStyle+" "+c.fontWeight+" 400px/1 "+c.fontFamily;
+      m.textContent=tx;
+      const unit=m.getBoundingClientRect().width/400;
+      /* 「0_ 」の余白は em なので文字と一緒に縮む。それ以外の余白は変わらない */
+      const spEm=td.classList.contains("sp")?.5:0, padFix=padR-spEm*base;
+      const fits=z=>unit*z<=room-padL-padFix-spEm*z+.5;
+      if(fits(base))return;
+      /* Excelは1ptずつ小さくして収める。
+         印刷される大きさは「Excel pt × 0.81」を 0.12pt 刻みに丸めた値
+         （16→12.96 14→11.40 11→8.88 10→8.16 9→7.32pt と実測が一致する） */
+      const xpx=p=>Math.round(p*.81/.12)*.12/.75;
+      const ex=Math.max(2,Math.round(base*.75/.81));
+      for(let p=ex-1;p>=4;p--){
+        const z=xpx(p);
+        if(fits(z)||p===4){td.style.fontSize=z.toFixed(2)+"px";break;}
+      }
+    });
+  }
+  m.remove();
+}
 
 function openSummary(){
   const frag=document.createDocumentFragment();
   const head=el("div","phead",
-    '<div class="sym">総括</div><div class="nm">Excel「姪浜総括」と同じ並び／A4横1ページ</div>');
+    '<div class="sym">総括</div><div class="nm">交通局へ出す様式のまま／A4横1ページ</div>');
   const pr=el("button","prbtn","印刷");pr.type="button";
   pr.onclick=()=>window.print();head.appendChild(pr);
   const x=el("button","x","×");x.onclick=closePop;head.appendChild(x);
@@ -1357,118 +1440,18 @@ function openSummary(){
   if(!missing.length&&!uniq.length)body.insertAdjacentHTML("beforeend",
     '<div class="repok">未入力なし。基準値・前回比の警告もありません。</div>');
   body.insertAdjacentHTML("beforeend",
-    '<div class="swipe2">帳票を横になぞると右側（冷媒圧力・積算電力量・備考）が見られます。印刷はA4横1ページです。</div>');
+    '<div class="swipe2">帳票を横になぞると右側（冷媒圧力・積算電力量・備考）が見られます。'+
+    '薄い色は未入力・注意の印で、画面だけのものです。印刷にも提出物にも出ません。</div>');
 
   /* --- 帳票 --- */
-  const tw=XL_W.reduce((a,b)=>a+b,0);
-  let h='<div class="shwrap"><div class="sheet"><table class="xl"><colgroup>'+
-    XL_W.map(w=>'<col style="width:'+(w/tw*100).toFixed(3)+'%">').join("")+'</colgroup><tbody>';
-  const tr=(mm,inner)=>{h+='<tr style="height:'+mm+'mm">'+inner+'</tr>';};
-
-  /* r2 表題・年度・点検日・No. */
-  tr(6.4,
-    '<td class="ttl" colspan="7">姪浜駅 空調衛生設備点検報告書</td>'+
-    '<td class="mval c">'+nendo(info.date).replace("年度","")+'</td>'+
-    '<td class="mlab">年度</td>'+xv(1)+
-    '<td class="mlab">点検日</td>'+
-    '<td class="mval" colspan="2">'+(jdate(info.date)||"—")+'</td>'+
-    '<td class="mlab">時</td>'+
-    '<td class="mval">'+(info.time||"—")+'</td>'+xv(1)+
-    '<td class="mlab">No.</td>'+
-    '<td class="mval">'+(info.no||"—")+'</td>');
-  /* r3 点検者（Excelでは空き行。ここに点検者を入れている） */
-  tr(6.0,'<td class="mlab" colspan="2">点検者</td>'+
-    '<td class="mval" colspan="5">'+(info.whoA||"—")+"　／　"+(info.whoB||"—")+'</td>'+xv(11));
-
-  /* r4〜r6 見出し */
-  tr(4.9,'<td class="hd" colspan="3" rowspan="2">点　検　項　目</td>'+
-    '<td class="hd" colspan="2">動　力　盤</td>'+
-    '<td class="hd" rowspan="2">運転時間</td>'+
-    xe(1)+'<td class="hd">電　圧</td>'+xe(1)+xv(1)+
-    '<td class="hd" colspan="4">名　称</td>'+
-    '<td class="hd">高圧基準値</td><td class="hd">測定値</td>'+
-    '<td class="hd">低圧基準値</td><td class="hd">測定値</td>');
-  tr(4.9,'<td class="hd" colspan="2">電流　（A）</td>'+
-    xe(1)+'<td class="hd">（V）</td>'+xe(1)+xv(1)+
-    '<td class="hd rmk" colspan="3" rowspan="2">ＭＡＣ－２１－０ 冷媒圧力</td>'+
-    '<td class="hd" rowspan="3">Ｍｐａ</td>'+
-    '<td class="std" rowspan="3">2.62～3.39</td>'+
-    xc("prs1.h",d2(gvn("prs1.h")))+
-    '<td class="std" rowspan="3">0.60～0.98</td>'+
-    xc("prs1.l",d2(gvn("prs1.l"))));
-  tr(4.9,'<td class="hd">記　号</td><td class="hd" colspan="2">名　称</td>'+
-    '<td class="hd">測定値</td><td class="hd">定　格</td><td class="hd">(H)</td>'+
-    '<td class="hd">RS</td><td class="hd">ST</td><td class="hd">TR</td>'+xv(1)+
-    xc("prs2.h",d2(gvn("prs2.h")))+xc("prs2.l",d2(gvn("prs2.l"))));
-
-  /* r7〜r26 本文 */
-  const RIGHT=[];
-  RIGHT[0]='<td class="hd rmk" colspan="3">ＡＣ－４１　冷媒圧力</td>'+
-           xc("prs3.h",d2(gvn("prs3.h")))+xc("prs3.l",d2(gvn("prs3.l")));
-  RIGHT[1]=xv(8);
-  RIGHT[2]='<td class="band" colspan="8">各動力盤積算電力量　(ｋＷｈ)</td>';
-  RIGHT[3]='<td class="hd" colspan="6">名称</td><td class="hd" colspan="2">使用量</td>';
-  XL_KW.forEach(([id,nm],i)=>{
-    const k=id+".v";
-    const cell=has(k)
-      ? '<td class="n '+scls(k)+'" colspan="2">'+dI(diffOf(k))+'</td>'
-      : '<td class="n miss" colspan="2">—</td>';
-    RIGHT[4+i]='<td class="rmk" colspan="6">'+nm+'</td>'+cell;
-  });
-  RIGHT[10]=xv(8);
-  RIGHT[11]=xv(8);
-  const prevD=String((HIST[HIST.length-1]||{}).d||"—").replace(/^0/,"").replace("/0","/");
-  RIGHT[12]='<td class="hd" colspan="3">備　考</td>'+
-    '<td class="n">'+prevD+'</td><td class="ctr">～</td>'+
-    '<td class="n">'+(mdOf(info.date)||"—")+'</td>'+
-    '<td class="hd" colspan="2">運転時間</td>';
-  const rm=ITEMS.find(it=>it.id==="rm")||{f:[]};
-  const rtx=rm.f.map(f=>val["rm."+f.id]).filter(s=>s&&String(s).trim());
-  for(let i=0;i<10;i++){
-    let t=rtx[i]||"";
-    if(i===9&&rtx.length>10)t=rtx.slice(9).join("／");
-    RIGHT[13+i]='<td class="rmk" colspan="8">'+String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;")+'</td>';
-  }
-
-  XL_ROWS.forEach((it,i)=>{
-    /* 記号の全角換算の長さでサイズを変える（Excelがセルごとに9/10/11ptを使っているのと同じ） */
-    const bl=[...it.b].reduce((n,ch)=>n+(ch.charCodeAt(0)>0xFF?1:0.5),0);
-    const sz=bl>=6?" s9":bl>=5?" s10":"";
-    let L='<td class="sy'+sz+'">'+symHTML(it.b)+'</td><td class="nm" colspan="2">'+it.nm+'</td>';
-    /* 電流・定格・運転時間 */
-    if(it.id){
-      L+=it.noA?xe(1):xc(it.id+".a",d1(gvn(it.id+".a")));
-      L+='<td class="std">'+d1(RATED[it.id])+'</td>';
-      L+=xc(it.id+".h",d1(diffOf(it.id+".h")));
-    }else{
-      L+=xe(3);
-    }
-    /* 電圧 RS/ST/TR */
-    if(it.volt){
-      L+=["rs","st","tr"].map(f=>xc(it.volt+"."+f,dI(gvn(it.volt+"."+f)))).join("");
-    }else if(it.volt1){
-      L+=xc(it.volt1,dI(gvn(it.volt1)))+xe(2);
-    }else if(it.temp){
-      L+=xe(1)+'<td class="hd">設定温度</td>'+xc(it.temp,d1(gvn(it.temp)));
-    }else if(it.fs){
-      L+='<td class="hd" colspan="2">FS動作確認</td>'+
-        (has("dpan.fs")?'<td class="n ctr '+scls("dpan.fs")+'">'+val["dpan.fs"]+'</td>'
-                       :'<td class="n ctr miss">未</td>');
-    }else{
-      L+=xe(3);
-    }
-    tr(i<18?5.8:5.9,L+xv(1)+(RIGHT[i]||xv(8)));
-  });
-  /* r27〜r29 左は空き。右は備考の続き */
-  for(let i=20;i<23;i++)tr(5.9,xv(9)+xv(1)+(RIGHT[i]||xv(8)));
-
-  h+='</tbody></table></div></div>';
-  body.insertAdjacentHTML("beforeend",h);
   body.insertAdjacentHTML("beforeend",
-    '<div class="repnote">列幅・行の並び・結合はExcelの「姪浜総括」と同じです。'+
+    '<div class="shwrap"><div class="sheet"><table class="xl">'+XL_TPL+'</table></div></div>');
+  fillSheet(body);
+  body.insertAdjacentHTML("beforeend",
+    '<div class="repnote">Excel「姪浜総括」の印刷結果と同じ寸法・書体で作っています'+
+    '（表の外形 259.2mm×178.8mm／A4横1ページ）。'+
     '定格は総括シートF列の値（入力画面の基準値とは別の数字）。'+
-    '運転時間は「今回の積算時間 − 前回の積算時間」、使用量は「今回の読み値 − 前回の読み値」。'+
-    '赤は未入力、橙は基準値・前回比の注意です。</div>');
+    '運転時間は「今回の積算時間 − 前回の積算時間」、使用量は「今回の読み値 − 前回の読み値」。</div>');
   frag.appendChild(body);
 
   const foot=el("div","pfoot");
@@ -1477,7 +1460,10 @@ function openSummary(){
   frag.appendChild(foot);
   openPop(frag,true);
   $("#panel").classList.add("xlwide");
-  requestAnimationFrame(()=>{$("#panel").scrollTop=0;});
+  $("#panel").scrollTop=0;
+  fitSheet($("#panel"));
+  /* 書体の読み込みが後になる端末では、そろってからもう一度そろえ直す */
+  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>fitSheet($("#panel")));
 }
 
 /* ============ 端末に残す（落ちても続きから） ============ */

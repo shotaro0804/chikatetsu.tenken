@@ -257,9 +257,11 @@ input::placeholder{color:#BEBAAE}
 
 table.xl{width:259.2mm;border-collapse:collapse;table-layout:fixed;background:#fff;color:#000;
   font-family:"ＭＳ 明朝","MS Mincho","Hiragino Mincho ProN","YuMincho","Yu Mincho",serif;
-  font-size:8.88pt;font-weight:400;line-height:1.08;letter-spacing:0;
-  font-variant-east-asian:normal;font-feature-settings:normal}
-table.xl td{padding:0 .43mm .2mm;border:0 solid #000;background:none;
+  font-size:8.88pt;font-weight:400;line-height:1.04;letter-spacing:0;
+  font-variant-east-asian:normal;font-feature-settings:normal;
+  /* ＭＳ 明朝は文字送りが整数pxに丸められて枠からはみ出す。実寸で送らせる */
+  text-rendering:geometricPrecision;font-kerning:none}
+table.xl td{padding:0 .53mm;border:0 solid #000;background:none;
   white-space:nowrap;overflow:visible;vertical-align:bottom;text-align:left}
 /* 書体（ＭＳ Ｐ明朝は記号・冷媒名称のセル。ＭＳ 明朝はiOSに無いので順に代替する） */
 table.xl td.pm{font-family:"ＭＳ Ｐ明朝","MS PMincho","Hiragino Mincho ProN","YuMincho","Yu Mincho",serif}
@@ -276,7 +278,9 @@ table.xl td.ar{text-align:right}
 table.xl td.al{text-align:left}
 table.xl td.ad{text-align:justify;text-align-last:justify;-webkit-text-align-last:justify}
 /* 縦位置 */
-table.xl td.vc{vertical-align:middle}
+/* 中央揃え。ブラウザの行ボックスの中心は文字の見た目の中心と少しずれるので、
+   上に余白を足して下げる（Excelの位置に合わせた実測値） */
+table.xl td.vc{vertical-align:middle;padding-top:.44mm}
 table.xl td.vt{vertical-align:top}
 /* 罫線（1＝thin 0.72pt／2＝medium 1.56pt） */
 table.xl td.t1{border-top-width:.72pt}
@@ -292,7 +296,7 @@ table.xl td.l2{border-left-width:1.56pt}
 table.xl td.gy{background:#D9D9D9;
   -webkit-print-color-adjust:exact;print-color-adjust:exact}
 /* 「0_ 」のように末尾へ空白を確保する表示形式。右に空白1文字分あける */
-table.xl td.sp{padding-right:calc(.43mm + .5em)}
+table.xl td.sp{padding-right:calc(.53mm + .5em)}
 /* 未入力・注意の印。画面で確かめるためだけのもので、印刷では消える */
 table.xl td.miss{background:#FBEDEB;box-shadow:inset 0 0 0 1px #E6B5AE}
 table.xl td.warn{background:#FDF6EA;box-shadow:inset 0 0 0 1px #E3CFA6}
@@ -1388,7 +1392,7 @@ function fitSheet(root){
   for(const tr of tbl.rows){
     const cs=[...tr.cells];
     cs.forEach((td,i)=>{
-      td.style.fontSize="";
+      td.style.fontSize="";td.style.letterSpacing="";
       const tx=td.textContent;
       if(!tx)return;
       const c=getComputedStyle(td);
@@ -1401,22 +1405,30 @@ function fitSheet(root){
       if(toR)for(let j=i+1;j<cs.length&&!cs[j].textContent;j++)room+=cs[j].getBoundingClientRect().width;
       if(toL)for(let j=i-1;j>=0&&!cs[j].textContent;j--)room+=cs[j].getBoundingClientRect().width;
       const base=parseFloat(c.fontSize)||12;
-      /* 端末によっては小さい文字の幅が丸められる。大きく測って割り戻すと本当の幅が出る */
+      /* 「0_ 」の余白は em なので文字と一緒に縮む。それ以外の余白は変わらない */
+      const spEm=td.classList.contains("sp")?.5:0, padFix=padR-spEm*base;
+      /* 本当の文字幅。小さい字は送りが丸められるので、大きく測って割り戻す */
+      m.style.letterSpacing="normal";
       m.style.font=c.fontStyle+" "+c.fontWeight+" 400px/1 "+c.fontFamily;
       m.textContent=tx;
       const unit=m.getBoundingClientRect().width/400;
-      /* 「0_ 」の余白は em なので文字と一緒に縮む。それ以外の余白は変わらない */
-      const spEm=td.classList.contains("sp")?.5:0, padFix=padR-spEm*base;
       const fits=z=>unit*z<=room-padL-padFix-spEm*z+.5;
-      if(fits(base))return;
-      /* Excelは1ptずつ小さくして収める。
-         印刷される大きさは「Excel pt × 0.81」を 0.12pt 刻みに丸めた値
-         （16→12.96 14→11.40 11→8.88 10→8.16 9→7.32pt と実測が一致する） */
-      const xpx=p=>Math.round(p*.81/.12)*.12/.75;
-      const ex=Math.max(2,Math.round(base*.75/.81));
-      for(let p=ex-1;p>=4;p--){
-        const z=xpx(p);
-        if(fits(z)||p===4){td.style.fontSize=z.toFixed(2)+"px";break;}
+      let z=base;
+      if(!fits(base)){
+        /* Excelは1ptずつ小さくして収める。
+           印刷される大きさは「Excel pt × 0.81」を 0.12pt 刻みに丸めた値
+           （16→12.96 14→11.40 11→8.88 10→8.16 9→7.32pt と実測が一致する） */
+        const xpx=p=>Math.round(p*.81/.12)*.12/.75;
+        const ex=Math.max(2,Math.round(base*.75/.81));
+        for(let p=ex-1;p>=4;p--){z=xpx(p);if(fits(z)||p===4)break;}
+        td.style.fontSize=z.toFixed(2)+"px";
+      }
+      /* ＭＳ 明朝は1文字ぶんの送りがピクセル単位に丸められ、Excelより1〜10%広く出る。
+         そのぶんを字間で打ち消して、Excelと同じ幅に収める（枠線に接するのを防ぐ） */
+      if(!ad){
+        m.style.fontSize=z+"px";
+        const actual=m.getBoundingClientRect().width, ideal=unit*z;
+        if(actual-ideal>.15)td.style.letterSpacing=((ideal-actual)/tx.length).toFixed(3)+"px";
       }
     });
   }

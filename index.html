@@ -394,6 +394,11 @@ svg.xlsvg{display:block}
   /* 罫線の灰色の塗りは提出物の一部なので必ず出す */
   svg.xlsvg,svg.xlsvg *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+/* ===== 旧版からの引き継ぎの知らせ（数秒で消える。押しても消える） ===== */
+.kyuban{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:9999;max-width:92vw;
+  background:#1F1E1C;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.5;
+  box-shadow:0 4px 16px rgba(0,0,0,.25)}
+@media print{.kyuban{display:none}}
 /* ===== 駅を選ぶ ===== */
 .stalist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .stapick{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;
@@ -2221,9 +2226,127 @@ $("#voltChk").onchange=e=>{
   $("#voltBar").classList.toggle("off",!e.target.checked);
   draw();saveSoon();
 };
+/* ============ 旧版（姪浜専用版）からの引き継ぎ ============ */
+/* 2026-10-06 に公開版を全駅版に差し替えた。旧版は入力を localStorage「meinohama:local:v1」、写真を IndexedDB「meinohama」に置き、
+   入力欄の名前も違う（mac21.a → MAC21.電流 など。対応表は 36駅展開/旧版対応.js が作ったもの）。
+   姪浜を開いたとき一度だけ、旧版で入力したもの（既定のままの値は除く）・設備メモ・写真を新しい版に移す。旧版のデータは消さない。
+   新しい版でもう入力していた欄は、入力した時刻が後のほうを残す。メモと写真は足し合わせる（どちらも消さない）。 */
+const 旧版対応={"駅ID":"空港箱崎線_01.姪浜","欄":{"mac21.a":"MAC21.電流","mac21.h":"MAC21.積算時間","sf21.a":"SF21.電流","sf21.h":"SF21.積算時間","ef21.a":"EF21.電流","ef21.h":"EF21.積算時間","sf31.a":"SF31.電流","sf31.h":"SF31.積算時間","ef31.a":"EF31.電流","ef31.h":"EF31.積算時間","ac41.a":"AC412.電流","ac41.h":"AC412.積算時間","pac71.h":"PAC71.積算時間","pac73.h":"PAC73.積算時間","pac72.h":"PAC72.積算時間","pac74.h":"PAC74.積算時間","dpan.v":"排水動力盤.電圧","dpan.fs":"EF.動作確認","tp.a":"TP2.電流","tp.h":"TP2.積算時間","sf.a":"SF.電流","sf.h":"SF.積算時間","ef.a":"EF.電流","ef.h":"EF.積算時間","prs1.h":"MAC210.高圧","prs1.l":"MAC210.低圧","prs2.h":"MAC2102.高圧","prs2.l":"MAC2102.低圧","prs3.h":"AC41.高圧","prs3.l":"AC41.低圧","kw1.v":"MAC212.積算電力量","kw2.v":"SFEF21.積算電力量","kw3.v":"電気室主幹.積算電力量","kw4.v":"AC41主幹.積算電力量","kw6.v":"TP.積算電力量","p1.rs":"P1.RS","p1.st":"P1.ST","p1.tr":"P1.TR","p3.rs":"P3.RS","p3.st":"P3.ST","p3.tr":"P3.TR","dkan.rs":"電気室動力制御盤.RS","dkan.st":"電気室動力制御盤.ST","dkan.tr":"電気室動力制御盤.TR","p5.rs":"P5.RS","p5.st":"P5.ST","p5.tr":"P5.TR","temp.t12":"PAC71.温度","temp.t34":"PAC72.温度","kasen.rs":"消火栓動力盤.RS","kasen.st":"消火栓動力盤.ST","kasen.tr":"消火栓動力盤.TR","kw5.v":"TP主幹.積算電力量","rm.r1":"rm.備考","rm.r2":"rm.備考2","rm.r3":"rm.備考3","rm.r4":"rm.備考4","rm.r5":"rm.備考5","rm.r6":"rm.備考6","rm.r7":"rm.備考7","rm.r8":"rm.備考8","rm.r9":"rm.備考9","rm.r10":"rm.備考10"},"機器":{"p1":"P1","p3":"P3","p4":"rm","mac21":"MAC21","sf21":"SF21","ef21":"EF21","dkan":"電気室動力制御盤","sf31":"SF31","ef31":"EF31","p5":"P5","ac41":"AC412","pac71":"PAC71","pac73":"PAC73","pac72":"PAC72","pac74":"PAC74","temp":"PAC71","dpan":"排水動力盤","tp":"TP2","sf":"SF","ef":"EF","kasen":"消火栓動力盤","prs1":"MAC210","prs2":"MAC2102","prs3":"AC41","kw1":"MAC212","kw2":"SFEF21","kw3":"電気室主幹","kw4":"AC41主幹","kw5":"TP主幹","kw6":"TP","rm":"rm"},"前置き":{"p4":"【P-4】"},"読み替え":{"dpan.fs":{"不":"否"}},"既定":{"p1.rs":"440","p1.st":"440","p1.tr":"440","p3.rs":"440","p3.st":"440","p3.tr":"440","mac21.a":"","mac21.h":"","sf21.a":"","sf21.h":"","ef21.a":"","ef21.h":"","dkan.rs":"440","dkan.st":"440","dkan.tr":"440","sf31.a":"","sf31.h":"","ef31.a":"","ef31.h":"","p5.rs":"440","p5.st":"440","p5.tr":"440","ac41.a":"","ac41.h":"","pac71.h":"","pac73.h":"","pac72.h":"","pac74.h":"","temp.t12":"","temp.t34":"","dpan.v":"100","dpan.fs":"","tp.a":"","tp.h":"","sf.a":"","sf.h":"","ef.a":"","ef.h":"","kasen.rs":"440","kasen.st":"440","kasen.tr":"440","prs1.h":"","prs1.l":"","prs2.h":"","prs2.l":"","prs3.h":"","prs3.l":"","kw1.v":"","kw2.v":"","kw3.v":"","kw4.v":"","kw5.v":"","kw6.v":"","rm.r1":"外観機能点検異常なし。","rm.r2":"","rm.r3":"","rm.r4":"","rm.r5":"","rm.r6":"","rm.r7":"","rm.r8":"","rm.r9":"","rm.r10":""}};
+const 旧版済み="tenken:"+ST.ID+":旧版から引継ぎ済み";
+let 旧版の件数={値:0,メモ:0};
+/* 備考は画面に出ていない欄（rm.all）にも移すので、fieldByKey ではなくこちらで引く */
+function 新の欄(k){
+  const i=k.indexOf("."),it=ITEMS.find(x=>x.id===k.slice(0,i));if(!it)return null;
+  const id=k.slice(i+1);
+  return it.f.find(x=>x.id===id)||(it.all||[]).find(x=>x.id===id)||null;
+}
+/* 起動したときに入る値（文字は前回の文、電圧は前回の値、ほかは空） */
+function 新の既定(k){
+  const f=新の欄(k);if(!f)return"";
+  return(f.t==="text"||f.t==="volt")&&f.prev!=null?String(f.prev):"";
+}
+/* 空白だけの備考（Excel の空欄は " " や「　」）は空と同じに見る */
+const 同じ字=(a,b)=>String(a==null?"":a).trim()===String(b==null?"":b).trim();
+function 旧版から引き継ぐ(){
+  if(ST.ID!==旧版対応.駅ID)return;
+  let 旧=null,新=null;
+  try{
+    if(localStorage.getItem(旧版済み))return;
+    旧=JSON.parse(localStorage.getItem("meinohama:local:v1")||"null");
+    新=JSON.parse(localStorage.getItem(LS)||"null");
+  }catch(e){return;}
+  if(!旧||旧.v!==1){try{localStorage.setItem(旧版済み,"旧版のデータ無し");}catch(e){}return;}
+  if(新&&新.v!==1)新=null;
+  const 新val=(新&&新.val)||{},新meta=(新&&新.meta)||{};
+  const 新で入力=k=>新val[k]!=null&&!同じ字(新val[k],新の既定(k));
+  const 新に入力あり=Object.keys(新val).some(新で入力);
+  const 出={v:1,at:Date.now(),
+    info:Object.assign({},(新&&新.info)||{}),val:Object.assign({},新val),meta:Object.assign({},新meta),
+    hideVolt:新&&新.hideVolt!=null?新.hideVolt:true,memo:Object.assign({},(新&&新.memo)||{}),
+    rmN:Math.max((新&&新.rmN)||2,2)};
+  let 件=0,メモ=0,備考の数=0,名前=false;
+  for(const ok of Object.keys(旧.val||{})){
+    const nk=旧版対応.欄[ok];if(!nk||!新の欄(nk))continue;
+    let s=旧.val[ok]==null?"":String(旧.val[ok]);
+    if(同じ字(s,旧版対応.既定[ok]))continue;                     /* 旧版の既定のまま＝入力していない */
+    const 読=旧版対応.読み替え[ok];if(読&&読[s]!=null)s=読[s];      /* 選択肢の字（旧「不」→ 新「否」） */
+    const m=旧.meta&&旧.meta[ok];
+    if(新で入力(nk)&&((新meta[nk]||{}).at||0)>=((m||{}).at||0))continue;   /* 新しい版で後から入れた値を残す */
+    出.val[nk]=s;if(m)出.meta[nk]=m;件++;
+    const r=/^rm\.r(\d+)$/.exec(ok);if(r)備考の数=Math.max(備考の数,+r[1]);
+  }
+  /* 設備メモ。新しい版にもメモがあれば後ろに足す（同じ文が行ごともう入っていれば足さない） */
+  for(const oi of Object.keys(旧.memo||{})){
+    const ni=旧版対応.機器[oi];let t=String(旧.memo[oi]||"").trim();
+    if(!ni||!t)continue;
+    t=(旧版対応.前置き[oi]||"")+t;
+    const 今=String(出.memo[ni]||"").trim();
+    if(("\n"+今+"\n").includes("\n"+t+"\n"))continue;
+    出.memo[ni]=今?今+"\n"+t:t;メモ++;
+  }
+  /* 移した備考がすべて画面に出るように（埋まった欄＋空き1つ。restoreLocal が rm.all から出す） */
+  if(備考の数)出.rmN=Math.max(出.rmN,備考の数+1,旧.rmN||0);
+  const 旧info=旧.info||{};
+  /* 点検者の名前：新しい版でまだ入れていなければ旧版の名前を使う */
+  for(const k of["whoA","whoB"])if(旧info[k]&&!出.info[k]){出.info[k]=旧info[k];名前=true;}
+  /* 点検日・No.・時刻と電圧の表示：旧版の続きを引き継ぐとき（新しい版でまだ何も入力していないとき）だけ */
+  if((件||メモ)&&!新に入力あり){
+    for(const k of["date","no","time"])if(旧info[k]!=null&&旧info[k]!=="")出.info[k]=旧info[k];
+    if(旧.hideVolt!=null)出.hideVolt=!!旧.hideVolt;
+  }
+  try{
+    if(件||メモ||名前)localStorage.setItem(LS,JSON.stringify(出));
+    localStorage.setItem(旧版済み,String(Date.now()));
+  }catch(e){}
+  旧版の件数={値:件,メモ:メモ};
+}
+/* 写真は新しい版の写真を読み終えてから、新しい版の写真に足す（今ある写真は消さない。同じ写真は二重にしない） */
+async function 旧版の写真を引き継ぐ(){
+  let 枚=0;
+  if(ST.ID===旧版対応.駅ID){
+    const 済=旧版済み+":写真";
+    try{
+      if(!localStorage.getItem(済)){
+        let ある=true;
+        if(indexedDB.databases){const ds=await indexedDB.databases();ある=ds.some(d=>d.name==="meinohama");}
+        if(ある){
+          const 旧db=await new Promise((res,rej)=>{const r=indexedDB.open("meinohama",1);r.onupgradeneeded=()=>{r.result.createObjectStore("photos");};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+          const 移す={};
+          if(旧db.objectStoreNames.contains("photos")){
+            const st=旧db.transaction("photos","readonly").objectStore("photos");
+            const ks=await idbReq(st.getAllKeys()),vs=await idbReq(st.getAll());
+            ks.forEach((oi,i)=>{const ni=旧版対応.機器[oi];if(ni&&Array.isArray(vs[i])&&vs[i].length)移す[ni]=(移す[ni]||[]).concat(vs[i]);});
+          }
+          旧db.close();
+          const ids=Object.keys(移す);
+          if(ids.length){
+            const db=await idb();
+            for(const ni of ids){
+              const 今=(await idbReq(db.transaction(DB_STORE,"readonly").objectStore(DB_STORE).get(ni)))||[];
+              const 足す=移す[ni].filter((p,i,a)=>!今.includes(p)&&a.indexOf(p)===i);
+              if(!足す.length)continue;
+              const 合=今.concat(足す);
+              await new Promise((res,rej)=>{const tx=db.transaction(DB_STORE,"readwrite");tx.objectStore(DB_STORE).put(合,ni);tx.oncomplete=()=>res();tx.onerror=tx.onabort=()=>rej(tx.error);});
+              memoOf(ni).ph=合;枚+=足す.length;
+            }
+            if(枚)draw();
+          }
+        }
+        localStorage.setItem(済,String(Date.now()));
+      }
+    }catch(e){}
+  }
+  if(旧版の件数.値||旧版の件数.メモ||枚)旧版の知らせ(旧版の件数,枚);
+}
+function 旧版の知らせ(数,枚){
+  const d=document.createElement("div");d.className="kyuban";
+  d.textContent="旧版（姪浜専用版）で入力していた"+[数.値?"値"+数.値+"項目":"",数.メモ?"メモ"+数.メモ+"件":"",枚?"写真"+枚+"枚":""].filter(Boolean).join("・")+"を引き継ぎました";
+  d.onclick=()=>d.remove();document.body.appendChild(d);setTimeout(()=>d.remove(),8000);
+}
+旧版から引き継ぐ();
 restoreLocal();
 draw();
-loadPhotos();
+loadPhotos().then(旧版の写真を引き継ぐ);
 
 /* ============ 駅の切り替え ============ */
 /* 駅ごとに入力も写真も別に持つので、切り替えは読み込み直しでよい（作りが単純で事故が少ない） */

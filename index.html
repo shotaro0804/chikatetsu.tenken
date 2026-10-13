@@ -257,6 +257,8 @@ input::placeholder{color:#BEBAAE}
 .prbtn{position:absolute;top:12px;right:52px;height:34px;padding:0 12px;border-radius:8px;
   border:1.5px dotted var(--ink);background:var(--white);color:var(--ink);
   font-size:12.5px;font-weight:700;line-height:1;white-space:nowrap}
+.prbtns{position:absolute;top:12px;right:52px;display:flex;gap:6px}
+.prbtns .prbtn{position:static}
 .panel.xlwide{max-width:min(98vw,1120px)}
 .shwrap{overflow-x:auto;overflow-y:hidden;touch-action:pan-x pan-y;-webkit-overflow-scrolling:touch;
   border:1px solid var(--line);border-radius:8px;background:var(--white)}
@@ -325,7 +327,7 @@ table.xl td.fault{background:#FBEDEB;box-shadow:inset 0 0 0 1px #E6B5AE}
   .pop,.pop.show{position:static;display:block;background:none;padding:0;overscroll-behavior:auto}
   .panel,.panel.xlwide{max-width:none;max-height:none;overflow:visible;box-shadow:none;
     border-radius:0;animation:none;width:auto}
-  .phead,.pfoot,.prbtn,.phead .x,.swipe2,.repnote,.repwarn,.repok{display:none !important}
+  .phead,.pfoot,.prbtns,.prbtn,.phead .x,.swipe2,.repnote,.repwarn,.repok{display:none !important}
   .pbody{padding:0}
   .shwrap{overflow:visible;border:0;border-radius:0;background:none}
   .sheet{width:259.2mm;padding:16.17mm 18mm 13mm 18.47mm;box-sizing:content-box}
@@ -1141,6 +1143,211 @@ const 字幅表={"MS-Mincho":{"設計":[[32,126,128],[160,166,128],[167,168,256]
   if (typeof module !== "undefined") module.exports = { svg, 幅の関数, 式の値, 条件, 余白 };
 })(typeof window !== "undefined" ? window : globalThis);
 
+/* 総括PDF.js — 総括の SVG（総括描画.js が作る頁ごとの文字列）を、そのまま A4横の PDF に写す（アプリに埋め込む。Node でも動く）。
+   iPhone の Safari は「A4横で刷る」指定を無視して A4縦に載せる（2ページに割れる）ので、アプリが自分で PDF を組み立てる。
+   PDF なら、どの端末で開いても紙の大きさ（Excel が刷った PDF と同じ 296.926×209.973mm）と字の位置は変わらない。
+
+     総括PDF.作る(頁たち, 中身たち, 情報) → Uint8Array（PDF のバイト列）
+       頁たち   … ST.総括.頁（幅・高さ mm）
+       中身たち … 総括描画.svg(...) の戻り値（頁ごとの svg の中身。単位は mm、用紙の左上が原点）
+       情報     … { 題 }（PDF の文書情報に入れる）
+
+   写し方（SVG の中身は 総括描画.js・下絵.js が作る決まった形だけ）
+     <path fill d="M h v h z…">  … 長方形の塗り（罫線もこれ）→ m l l l h f
+     <rect fill>                   … 条件付き書式の塗り → re f（<g class="mks"> の印は画面だけなので写さない）
+     <text class font-size x y clip-path fill> … 1字ずつ x の位置に置く（Tm）。字の幅は見る側の書体に任せない
+     <clipPath><rect>              … はみ出す字の切り抜き → re W n
+     <image href="data:image/png…"> … 総括PDF.画像表 に前もって RGB と透明度に分けたもの（アプリ組み立て.js が作る）を置く
+   書体は埋め込まない（ＭＳ 明朝は配れない）。Adobe-Japan1 の CID 書体として名前だけ書くので、
+   Windows では ＭＳ 明朝、iPhone ではヒラギノ明朝などで描かれる。位置は1字ずつ決めてあるので、書体が違っても字の場所は同じ。 */
+(function (root) {
+  const K = 72 / 25.4;                      /* mm → pt */
+  const f3 = v => { const s = (Math.round(v * 1000) / 1000).toFixed(3); return s.replace(/\.?0+$/, "") || "0"; };
+  /* 書体のクラス（総括描画.js・描画確認.js の .fm .fp .fg .fq）→ PDF の書体名 */
+  const 書体名 = { fm: "MS-Mincho", fp: "MS-PMincho", fg: "MS-Gothic", fq: "MS-PGothic" };
+  const 明朝 = { fm: true, fp: true };
+  const 色 = s => {
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(s || "");
+    return m ? [1, 2, 3].map(i => f3(parseInt(m[i], 16) / 255)).join(" ") : "0 0 0";
+  };
+  const 属性 = s => { const o = {}; for (const m of s.matchAll(/([\w:-]+)="([^"]*)"/g)) o[m[1]] = m[2]; return o; };
+  const 戻す = s => s.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+  /* 字 → UTF-16BE の16進（UniJIS-UTF16-H の符号そのもの） */
+  const 符号 = ch => { let h = ""; for (let i = 0; i < ch.length; i++) h += ch.charCodeAt(i).toString(16).padStart(4, "0").toUpperCase(); return h; };
+
+  /* 1頁ぶん：svg の中身 → PDF の描画命令。使った書体・字・画像を 使う に足していく */
+  function 頁を写す(svg, 高さ, 使う) {
+    const Y = y => (高さ - y) * K;
+    const 切り = new Map();
+    for (const m of svg.matchAll(/<clipPath id="([^"]+)"><rect([^>]*)\/><\/clipPath>/g)) {
+      const a = 属性(m[2]); 切り.set(m[1], [+a.x, +a.y, +a.width, +a.height]);
+    }
+    /* 定義と画面だけの印は描かない */
+    const 本体 = svg.replace(/<defs>[\s\S]*?<\/defs>/g, "").replace(/<g class="mks">[\s\S]*?<\/g>/g, "");
+    const out = [];
+    let 今の塗り = null;
+    const 塗りの色 = c => { if (c !== 今の塗り) { out.push(c + " rg"); 今の塗り = c; } };
+    for (const m of 本体.matchAll(/<(path|rect|text|image|line)\b([^>]*?)(\/>|>([\s\S]*?)<\/\1>)/g)) {
+      const tag = m[1], a = 属性(m[2]);
+      if (tag === "line") {
+        out.push(f3(+(a["stroke-width"] || 0) * K) + " w " + 色(a.stroke) + " RG " + f3(+a.x1 * K) + " " + f3(Y(+a.y1)) + " m " + f3(+a.x2 * K) + " " + f3(Y(+a.y2)) + " l S");
+      } else if (tag === "path") {
+        塗りの色(色(a.fill));
+        /* 下絵の塗りはほぼ全部「M x y h w v h h -w z」の長方形。Excel の PDF と同じく re で書く（中身が短くなる。描かれ方は m l l l と同じだった） */
+        const 長方形 = [], 残り = (a.d || "").replace(/M\s*(-?[\d.]+)[\s,]+(-?[\d.]+)\s*h\s*(-?[\d.]+)\s*v\s*(-?[\d.]+)\s*h\s*(-?[\d.]+)\s*z/g, (s, x, y, w, h, w2) => {
+          if (Math.abs(+w + +w2) > 1e-9) return s;
+          const x0 = Math.min(+x, +x + +w), y0 = Math.min(+y, +y + +h);
+          長方形.push(f3(x0 * K) + " " + f3(Y(y0 + Math.abs(+h))) + " " + f3(Math.abs(+w) * K) + " " + f3(Math.abs(+h) * K) + " re");
+          return "";
+        });
+        if (長方形.length) out.push(長方形.join(" ") + " f");
+        if (!残り.trim()) continue;
+        const ops = [];
+        let x = 0, y = 0;
+        for (const t of 残り.matchAll(/([MmHhVvLlZz])([^MmHhVvLlZz]*)/g)) {
+          const n = (t[2].match(/-?\d*\.?\d+(?:e-?\d+)?/g) || []).map(Number);
+          switch (t[1]) {
+            case "M": x = n[0]; y = n[1]; ops.push(f3(x * K) + " " + f3(Y(y)) + " m"); break;
+            case "m": x += n[0]; y += n[1]; ops.push(f3(x * K) + " " + f3(Y(y)) + " m"); break;
+            case "L": x = n[0]; y = n[1]; ops.push(f3(x * K) + " " + f3(Y(y)) + " l"); break;
+            case "l": x += n[0]; y += n[1]; ops.push(f3(x * K) + " " + f3(Y(y)) + " l"); break;
+            case "H": x = n[0]; ops.push(f3(x * K) + " " + f3(Y(y)) + " l"); break;
+            case "h": x += n[0]; ops.push(f3(x * K) + " " + f3(Y(y)) + " l"); break;
+            case "V": y = n[0]; ops.push(f3(x * K) + " " + f3(Y(y)) + " l"); break;
+            case "v": y += n[0]; ops.push(f3(x * K) + " " + f3(Y(y)) + " l"); break;
+            default: ops.push("h");
+          }
+        }
+        out.push(ops.join(" ") + " f");
+      } else if (tag === "rect") {
+        if (/\bmk\b/.test(a.class || "")) continue;
+        塗りの色(色(a.fill));
+        const x = +a.x, y = +a.y, w = +a.width, h = +a.height;
+        out.push(f3(x * K) + " " + f3(Y(y + h)) + " " + f3(w * K) + " " + f3(h * K) + " re f");
+      } else if (tag === "image") {
+        const im = 総括PDF.画像表[a.href];
+        if (!im) continue;
+        let 名 = 使う.画像.get(a.href);
+        if (!名) { 名 = "Im" + (使う.画像.size + 1); 使う.画像.set(a.href, 名); }
+        const x = +a.x, y = +a.y, w = +a.width, h = +a.height;
+        out.push("q " + f3(w * K) + " 0 0 " + f3(h * K) + " " + f3(x * K) + " " + f3(Y(y + h)) + " cm /" + 名 + " Do Q");
+      } else {
+        const cls = (a.class || "fm").split(/\s+/).find(c => 書体名[c]) || "fm";
+        const 字 = Array.from(戻す(m[4] || ""));
+        const xs = (a.x || "").trim().split(/[\s,]+/).map(Number), y = +a.y, fs = +a["font-size"];
+        if (!字.length || !(fs > 0)) continue;
+        使う.書体.add(cls);
+        const 切 = a["clip-path"] && 切り.get((/#([^)]+)\)/.exec(a["clip-path"]) || [])[1]);
+        const 命令 = [];
+        const 半角 = c => c.charCodeAt(0) < 0x2000 || (c >= "｡" && c <= "ﾟ");
+        let 前x = xs[0] || 0, 前の字 = "";
+        字.forEach((ch, i) => {
+          /* x の数が字より少ないとき（無いはずだが）は、前の字の隣（全角・半角の幅）に置く */
+          const x = i < xs.length && isFinite(xs[i]) ? xs[i] : 前x + fs * (半角(前の字) ? 0.5 : 1);
+          前x = x; 前の字 = ch;
+          if (ch === " " || ch === "　" || ch === " " || ch === "\n" || ch === "\t") return;
+          使う.字.add(ch);
+          命令.push("1 0 0 1 " + f3(x * K) + " " + f3(Y(y)) + " Tm <" + 符号(ch) + "> Tj");
+        });
+        if (!命令.length) continue;
+        /* Excel の太字は「塗って縁取る」（描き方 2）。縁の太さ・色は下絵の stroke・stroke-width。描き方は文字の状態なので毎回書く */
+        const 縁 = a.stroke ? f3(+(a["stroke-width"] || 0) * K) + " w " + 色(a.stroke) + " RG 2 Tr " : "0 Tr ";
+        const 文 = "BT /" + 使う.書体名(cls) + " " + f3(fs * K) + " Tf " + 色(a.fill) + " rg " + 縁 + 命令.join(" ") + " ET";
+        今の塗り = null;   /* rg は BT の中でも塗りの色を変えるので、次の塗りで色を出し直す */
+        if (切) out.push("q " + f3(切[0] * K) + " " + f3(Y(切[1] + 切[3])) + " " + f3(切[2] * K) + " " + f3(切[3] * K) + " re W n " + 文 + " Q");
+        else out.push(文);
+      }
+    }
+    return out.join("\n");
+  }
+
+  function 作る(頁たち, 中身たち, 情報) {
+    const 使う = { 書体: new Set(), 字: new Set(), 画像: new Map(), 書体名: c => "F" + (Object.keys(書体名).indexOf(c) + 1) };
+    const 描画 = 中身たち.map((svg, i) => 頁を写す(svg || "", 頁たち[i] ? 頁たち[i].高さ : 209.973, 使う));
+
+    /* PDF の組み立て。objs[i] は i+1 番の中身（Uint8Array か文字列） */
+    const enc = typeof TextEncoder !== "undefined" ? new TextEncoder() : null;
+    const バイト = s => enc ? enc.encode(s) : Uint8Array.from(Buffer.from(s, "latin1"));
+    const objs = [];
+    const 足す = v => { objs.push(v); return objs.length; };
+    const 流れ = (辞書, 中身) => { const b = typeof 中身 === "string" ? バイト(中身) : 中身; return [バイト("<< " + 辞書 + " /Length " + b.length + " >>\nstream\n"), b, バイト("\nendstream")]; };
+
+    const 目録 = 足す(null), 頁束 = 足す(null);
+    /* 字の中身（ToUnicode）。符号は UTF-16BE なので、使った字だけ「その字そのもの」に結ぶ */
+    const 字一覧 = [...使う.字].sort();
+    let cmap = "/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n" +
+      "/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n3 begincodespacerange\n<0000> <D7FF>\n<D800DC00> <DBFFDFFF>\n<E000> <FFFF>\nendcodespacerange\n";
+    for (let i = 0; i < 字一覧.length; i += 100) {
+      const 組 = 字一覧.slice(i, i + 100);
+      cmap += 組.length + " beginbfchar\n" + 組.map(c => "<" + 符号(c) + "> <" + 符号(c) + ">").join("\n") + "\nendbfchar\n";
+    }
+    cmap += "endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend";
+    const 字の中身 = 足す(流れ("", cmap));
+
+    /* 書体（埋め込まない CID 書体）。字の位置は Tm で1字ずつ決めるが、見る側は手持ちの書体の字を W の幅に合わせて伸び縮みさせるので、
+       W は ＭＳ 明朝・ＭＳ Ｐ明朝の本当の幅（総括PDF.幅。総括PDF幅.js が字幅表.json と UniJIS-UTF16-H から作る）。ゴシックは明朝の幅で代用 */
+    const 書体の参照 = [];
+    for (const cls of Object.keys(書体名)) {
+      if (!使う.書体.has(cls)) continue;
+      const 名 = 書体名[cls];
+      const 幅 = (総括PDF.幅 && 総括PDF.幅.W && 総括PDF.幅.W[cls === "fp" || cls === "fq" ? "MS-PMincho" : "MS-Mincho"]) || "1 95 500 231 632 500";
+      const 説明 = 足す("<< /Type /FontDescriptor /FontName /" + 名 + " /Flags " + (明朝[cls] ? 6 : 4) +
+        " /FontBBox [0 -141 1000 859] /ItalicAngle 0 /Ascent 859 /Descent -141 /CapHeight 769 /StemV 78" +
+        /* 明朝か ゴシックかを見る側に伝える（PDF の仕様書の和文書体の例と同じ値） */
+        (明朝[cls] ? " /Style << /Panose <010502020400000000000000> >>" : " /Style << /Panose <0801020B0600000000000000> >>") + " >>");
+      const 子 = 足す("<< /Type /Font /Subtype /CIDFontType2 /BaseFont /" + 名 +
+        " /CIDSystemInfo << /Registry (Adobe) /Ordering (Japan1) /Supplement 6 >> /FontDescriptor " + 説明 + " 0 R" +
+        " /DW 1000 /W [" + 幅 + "] >>");
+      const 親 = 足す("<< /Type /Font /Subtype /Type0 /BaseFont /" + 名 + " /Encoding /UniJIS-UTF16-H /DescendantFonts [" + 子 + " 0 R] /ToUnicode " + 字の中身 + " 0 R >>");
+      書体の参照.push("/" + 使う.書体名(cls) + " " + 親 + " 0 R");
+    }
+
+    /* 画像（RGB と透明度。総括PDF.画像表 にあるもの） */
+    const 画像の参照 = [];
+    for (const [href, 名] of 使う.画像) {
+      const im = 総括PDF.画像表[href];
+      const b64 = s => typeof atob !== "undefined" ? Uint8Array.from(atob(s), c => c.charCodeAt(0)) : Uint8Array.from(Buffer.from(s, "base64"));
+      const 透明 = 足す(流れ("/Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceGray /BitsPerComponent 8", b64(im.a)));
+      const 本体 = 足す(流れ("/Type /XObject /Subtype /Image /Width " + im.w + " /Height " + im.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /SMask " + 透明 + " 0 R", b64(im.rgb)));
+      画像の参照.push("/" + 名 + " " + 本体 + " 0 R");
+    }
+    const 資源 = "<< /Font << " + 書体の参照.join(" ") + " >>" + (画像の参照.length ? " /XObject << " + 画像の参照.join(" ") + " >>" : "") + " >>";
+
+    const 頁の番号 = 描画.map((中, i) => {
+      const 頁 = 頁たち[i] || { 幅: 296.926, 高さ: 209.973 };
+      const 中身 = 足す(流れ("", 中));
+      return 足す("<< /Type /Page /Parent " + 頁束 + " 0 R /MediaBox [0 0 " + f3(頁.幅 * K) + " " + f3(頁.高さ * K) + "] /Resources " + 資源 + " /Contents " + 中身 + " 0 R >>");
+    });
+    objs[目録 - 1] = "<< /Type /Catalog /Pages " + 頁束 + " 0 R >>";
+    objs[頁束 - 1] = "<< /Type /Pages /Kids [" + 頁の番号.map(n => n + " 0 R").join(" ") + "] /Count " + 頁の番号.length + " >>";
+    const 題 = 情報 && 情報.題 ? "FEFF" + 符号(情報.題) : null;
+    const 文書 = 足す("<< " + (題 ? "/Title <" + 題 + "> " : "") + "/Creator (chikatetsu.tenken) /Producer (tenken-pdf) >>");
+
+    /* 書き出し */
+    const 部品 = [バイト("%PDF-1.7\n"), Uint8Array.from([0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A])];   /* 2行目は「中身にバイナリがある」印 */
+    let 位置 = 部品[0].length + 部品[1].length;
+    const 置き場 = [];
+    objs.forEach((o, i) => {
+      置き場.push(位置);
+      const 中 = Array.isArray(o) ? o : [バイト(o)];
+      const 頭 = バイト((i + 1) + " 0 obj\n"), 尾 = バイト("\nendobj\n");
+      for (const p of [頭, ...中, 尾]) { 部品.push(p); 位置 += p.length; }
+    });
+    const xref = "xref\n0 " + (objs.length + 1) + "\n0000000000 65535 f \n" + 置き場.map(p => String(p).padStart(10, "0") + " 00000 n \n").join("") +
+      "trailer\n<< /Size " + (objs.length + 1) + " /Root " + 目録 + " 0 R /Info " + 文書 + " 0 R >>\nstartxref\n" + 位置 + "\n%%EOF\n";
+    部品.push(バイト(xref));
+    const 全 = new Uint8Array(部品.reduce((s, p) => s + p.length, 0));
+    let o = 0; for (const p of 部品) { 全.set(p, o); o += p.length; }
+    return 全;
+  }
+
+  const 総括PDF = { 作る, 画像表: {}, 幅: null };
+  root.総括PDF = 総括PDF;
+  if (typeof module !== "undefined") module.exports = 総括PDF;
+})(typeof window !== "undefined" ? window : globalThis);
+
+総括PDF.画像表={"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAC4AAAAeCAYAAABTwyyaAAAAY0lEQVR4nO3Wqw7AIAxAUX6z/69qm6aWJVMTY0uGWAv3JBiCuDwErQEAVtUnxr/hXxBO+ErhEdHdvV743Zr04apa56lc50YbSxluZmeYiAxvImX422mnD39C+JbhVX+HALCRA1s9x7tcKrDXAAAAAElFTkSuQmCC":{"w":46,"h":30,"rgb":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////////////////9vb29PT0////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////////////////AAAA////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////////////6enp////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////AAAA////////AAAA////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////8vLyAAAAWVlZ////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////////AAAA////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////////////////////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","a":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"}};
+総括PDF.幅={"W":{"MS-Mincho":"1 [500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500] 97 [500] 99 [500 500 500 500 500 500] 107 [500] 109 [500 500 500] 114 [500] 117 [500] 119 [500 500 500] 123 [500] 126 [500] 129 [500] 134 [500] 138 [500 500 500] 142 [500] 144 [500 500] 148 [500] 150 [500 500 500 500 500] 157 [500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500] 187 [500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500] 216 [500 500 500 500 500 500 500] 226 [500] 228 [500] 323 [500] 327 [500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500] 7483 [500 500 500 500 500 500 500 500] 7492 [500 500] 7496 [500 500] 7500 [500 500] 7504 [500 500] 7509 [500 500] 7512 [500 500] 7517 [500 500] 7520 [500 500] 7524 [500 500] 7528 [500 500] 7532 [500 500] 7536 [500 500] 7540 [500 500] 7543 [500 500] 7546 [500 500 500 500 500 500 500 500] 8009 [500 500 500 500 500 500 500 500 500 500 500] 8025 [500] 8195 [500] 8210 [500 500 500 500 500] 8230 [500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500] 8261 [500 500 500] 8304 [500 500] 8309 [500 500 500] 9355 [500] 9371 [500 500 500 500 500 500] 9785 [500 500 500 500 500] 9806 [707] 10502 [500] 11855 [500] 11859 [500] 12089 [500] 12091 [500 500] 12099 [500 500] 12111 [500] 12118 [500] 12120 [500 500 500] 12184 [500 500 500 500 500 500] 12194 [500 500] 12200 [500 500 500 500 500 500 500 500] 12237 [500] 12239 [500] 12254 [500] 15472 [500 500 500 500 500] 15478 [500 500] 15490 [500] 15505 [500] 15507 [500 500 500 500] 15515 [500] 15725 [500 500 500] 15849 [500] 15906 [500] 16199 [500 500] 16235 [500] 16274 [500 500 500 500] 16282 [500] 20366 [500 500 500 500 500 500]","MS-PMincho":"1 [305 305 461 500 500 500 613 305 305 305 500 500 305 500 305 500 500 500 500 500 500 500 500 500 500 500 305 305 500 500 500 500 727 664 621 699 691 598 598 711 723 289 387 668 586 801 664 766 563 766 602 504 625 691 664 871 656 625 563 332 492 332 305 305 305 453 500 465 500 473 254 473 500 242 242 492 242 703 500 500 500 500 367 414 352 500 477 602 469 477 453 242 117 242] 96 [500 500 500 219 500 266 426 598 500] 107 [508 500 551 434 434] 114 [500] 117 [223] 119 [238 238 367 500 551] 126 [453] 129 [668] 134 [223] 138 [668 668 383] 142 [668] 144 [383 668] 148 [465] 150 [563 496 668 668 668] 157 [277 277 484 191 520 520 520 668 668 668 668 668 668 668 582 582 582 582 293 293 293 340 641 668 668 668 668 668 668] 187 [668 668 668 668 668 484 445 445 445 445 445 445 426 438 438 438 438 242 242 297 332 430 504 465 465 465 465 465] 216 [504 504 504 504 504 477 504] 226 [305] 228 [668] 323 [500] 327 [438 438 438 438 438 574 527 480 484 523 570 531 551 438 531 664 613 586 551 648 652 590 598 535 625 539 652 652 594 648 539 574 637 586 637 453 664 625 594 648 535 664 523 598 664 613 648 449 625 531 648 637 648 555 574 469 664 590 574 598 613 238 227] 633 [664 664 664 664 664 500 500 500] 643 [500 500 500 500 500 500] 651 [648 801 652 703] 662 [500] 674 [500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500 500] 776 [500 500 500] 780 [621 621 621 621 621 621 621 621 621 621 805 715 762 813 719 688 801 859 359 359 805 676] 803 [836 832 680 832 727 688 719 855 770 977 730 777 656 531 574 531 574 543 387 559 613 293 293 570 293 875 613 574 574 574 414 469 422 613 543 781 574 563 500 754 883 750 953 508 617 703 898 801] 852 [945 949 793 895 645 805 914 980 754 867 754 883 777 777] 870 [922 961 906 949 902 902 855] 879 [902 941 703 844 902 949] 887 [949 969] 900 [945 980 980 824] 906 [953 758 875] 910 [836 934 688 785 766 641 793 984 863 801 953 945 984 855 945 750 891 668 777 707 801 805 941 809 941 879 926 887 902 746 883 883 934 793 863 953 961 902 902 820 902 930 949 754 855 785 910 965 945 734 848 922 902] 964 [590 707 973 910 805 922 699 977 977 977 656 852 844 844 945 945] 983 [883 922 922 930 609 863 676 941 789 926 793 941 598 703 766 609 980 832 785 699 805 965 961 785 863 883 695 766] 7483 [664 664 664 664 664 664 664 664] 7492 [664 664] 7496 [664 664] 7500 [664 664] 7504 [664 664] 7509 [664 664] 7512 [664 664] 7517 [664 664] 7520 [664 664] 7524 [664 664] 7528 [664 664] 7532 [664 664] 7536 [664 664] 7540 [664 664] 7543 [664 664] 7546 [664 664 664 664 664 664 664 664] 7958 [715 855 824] 8009 [500 500 555 555 531 531 500 664 664 602 617] 8025 [473] 8195 [500] 8210 [500 668 668 668 668] 8230 [664 664 664 668 664 664 664 668 664 664 664 668 664 664 664 664 664 664 664 664 664 668 668 668 668 500 500 500 500] 8261 [664 664 664] 8304 [453 664] 8309 [664 664 586] 8313 [848 977 910 887] 9355 [551] 9371 [520 520 520 520 500 500] 9785 [500 500 500 500 500] 9806 [707] 10502 [500] 11855 [664] 11859 [512] 12089 [441] 12091 [500 477] 12099 [352 664] 12111 [402] 12118 [500] 12120 [500 500 500] 12131 [500 500] 12184 [500 500 500 500 500 500] 12194 [500 500] 12200 [664 668 664 664 664 664 664 664] 12237 [270] 12239 [270] 12254 [277] 15472 [500 500 500 500 500] 15478 [551 551] 15490 [500] 15505 [500] 15507 [500 434 500 500] 15515 [551] 15725 [500 500 500] 15849 [664] 15906 [500] 16199 [387 668] 16235 [500] 16274 [500 500 500 500] 16282 [664] 20366 [516 668 668 574 574 512]"}};
 /* 架空値.js — 「架空の点検」の値を、駅ごとに決まった形で作る（Node でもアプリでも同じ値が出る）。
    全駅を架空の数字で試すためのもの。同じ値を Excel（蓄積シートの次の行）にも入れて刷らせ、
    アプリの印刷と字単位で突き合わせる（架空書き込み.js → Excel架空.ps1 ／ ?架空=1 → アプリ架空印刷.ps1 → 架空照合.js）。
@@ -1399,7 +1606,7 @@ function voltOn(ids){
   const t=VKEYS.filter(([k])=>!ids||ids.includes(k.split(".")[0]));
   return t.length>0&&t.every(([k,p])=>val[k]===String(p));
 }
-setVolt(true);VKEYS.forEach(([k])=>{delete meta[k];});   /* 起動時の既定は入力に数えない（相方の入力を上書きしないため） */
+setVolt(true);VKEYS.forEach(([k])=>{delete meta[k];});delete meta["@点検日"];delete meta["@時刻"];   /* 起動時の既定は入力に数えない（相方の入力を上書きしないため） */
 let hideVolt=true;
 
 const keys=ITEMS.flatMap(it=>it.f.filter(counted).map(f=>it.id+"."+f.id));
@@ -2006,7 +2213,7 @@ $("#infoBar").onclick=()=>{
   const body=el("div","pbody");
   const d=el("div");d.style.marginBottom="12px";
   d.appendChild(el("div","lbl","点検日"));
-  const di=document.createElement("input");di.type="date";di.value=info.date;di.oninput=()=>{info.date=di.value;saveSoon();pushSoon();};
+  const di=document.createElement("input");di.type="date";di.value=info.date;di.oninput=()=>{info.date=di.value;mark("@点検日");pushSoon();};
   d.appendChild(di);body.appendChild(d);
   const n=el("div");n.style.marginBottom="14px";n.style.maxWidth="150px";
   n.appendChild(el("div","lbl","点検表 No."));
@@ -2015,7 +2222,7 @@ $("#infoBar").onclick=()=>{
   body.appendChild(el("div","lbl","時刻"));
   const ch=el("div","chips");ch.style.marginBottom="14px";
   TIMES.forEach(t=>{const b=el("button","chip",t);b.type="button";b.setAttribute("aria-pressed",info.time===t);
-    b.onclick=()=>{info.time=t;[...ch.children].forEach(c=>c.setAttribute("aria-pressed",c.textContent===t));saveSoon();};
+    b.onclick=()=>{info.time=t;[...ch.children].forEach(c=>c.setAttribute("aria-pressed",c.textContent===t));mark("@時刻");pushSoon();};
     ch.appendChild(b);});
   body.appendChild(ch);
   const p2=el("div","pair");
@@ -2069,8 +2276,19 @@ function 部屋(){
   const d=String(info.date||""),y=+d.slice(0,4),m=+d.slice(5,7);
   return ST.ID+"|"+(y?(m>=4?y:y-1):"")+"|"+String(info.no||"").trim();
 }
-/* 入力した印。どの回の入力かも持つ（No. を変えたとき、前の回の値を新しい回に送らないため） */
-function mark(k){meta[k]={by:me()||"—",at:Date.now(),r:部屋()};saveSoon();}
+/* 点検日・時刻も相方と分け合う（印刷する PC が、現場で入れた日付・時刻で刷れるように）。val ではなく info に入る */
+/* var：起動の途中（電圧の既定を入れる setVolt → mark）ではまだ undefined。そのときは点検日・時刻に触らない */
+var 情報キー={"@点検日":"date","@時刻":"time"};
+/* 入力した印。どの回の入力かも持つ（No. を変えたとき、前の回の値を新しい回に送らないため）。
+   その回で初めて自分が値を入れたとき、まだ決まっていなければ（相方から届いていない・自分で選んでいない）、
+   この端末の点検日・時刻をその回のものにする */
+function mark(k){
+  const r=部屋(),at=Date.now();
+  meta[k]={by:me()||"—",at,r};
+  if(情報キー&&!(k in 情報キー))Object.keys(情報キー).forEach(x=>{if(!meta[x]||meta[x].r!==r)meta[x]={by:me()||"—",at,r};});
+  saveSoon();
+}
+function 送る値(k){return k in 情報キー?String(info[情報キー[k]]||""):val[k]==null?"":String(val[k]);}
 /* var にしておく：起動の途中（draw など）から先に触られても止まらないように */
 var 同期={部屋:"",since:0,送った:{},保留:{},相方:{},印:"",状態:"",最終:0,ずれ:0,送信中:false,次:null};
 function pushSoon(){if(!同期||!共有する())return;clearTimeout(同期.次);同期.次=setTimeout(sync,700);}
@@ -2111,7 +2329,7 @@ async function sync(){
     if(m.r!==room)return;
     if(m.by==="—")m.by=n;
     if(同期.送った[k]===m.at)return;
-    f[k]={v:val[k]==null?"":String(val[k]),by:m.by,at:m.at};
+    f[k]={v:送る値(k),by:m.by,at:m.at};
   });
   const here=curItem?curItem.id:"";
   同期.送信中=true;
@@ -2141,14 +2359,18 @@ async function sync(){
 function 受け取る(rf,room){
   Object.assign(同期.保留,rf);
   const fk=focusedKey(),変わった=[];
+  let 日時=false;
   Object.keys(同期.保留).forEach(k=>{
     if(k===fk)return;
     const r=同期.保留[k],l=meta[k];delete 同期.保留[k];
     if(l&&l.r===room&&!(r.at>l.at||(r.at===l.at&&r.by>l.by)))return;
-    const 前=val[k]==null?"":String(val[k]);
-    val[k]=r.v;meta[k]={by:r.by,at:r.at,r:room};同期.送った[k]=r.at;
+    const 前=送る値(k);
+    meta[k]={by:r.by,at:r.at,r:room};同期.送った[k]=r.at;
+    if(k in 情報キー){info[情報キー[k]]=r.v;if(前!==r.v)日時=true;return;}
+    val[k]=r.v;
     if(前!==r.v){印を付け直す(k);変わった.push(k);}
   });
+  if(日時){saveSoon();if(!変わった.length)draw();}   /* 点検日・時刻は一覧の上の「点検」の帯に出る */
   if(!変わった.length)return;
   /* 備考は埋まった欄＋空き1つを画面に出す（restoreLocal と同じ） */
   const rm=ITEMS.find(x=>x.id==="rm");
@@ -2585,12 +2807,38 @@ function fitOne(root,tbl){
   m.remove();
 }
 
+/* ============ 総括の PDF（36駅展開/総括PDF.js） ============ */
+/* 総括描画.svg と同じ中身を、Excel の PDF と同じ大きさ（296.926×209.973mm）の PDF に写す。字は1字ずつ位置を決めて置き、書体は埋め込まない
+   （Windows では ＭＳ 明朝、iPhone ではヒラギノ明朝などで描かれる。位置は同じ） */
+function iOS端末(){return /iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);}
+function 総括PDFの名前(){return (ST.名||"総括")+"_総括_No"+(info.no||"")+"_"+(info.date||"")+".pdf";}
+function 総括PDFの中身(){return 総括PDF.作る(ST.総括.頁,総括描画.svg(ST.総括,生値,印),{題:(ST.名||"")+"　総括　No."+(info.no||"")+"　"+(info.date||"")});}
+function 総括PDFのURL(){
+  const b=総括PDFの中身();
+  let f;try{f=new File([b],総括PDFの名前(),{type:"application/pdf"});}catch(e){f=new Blob([b],{type:"application/pdf"});}
+  return URL.createObjectURL(f);
+}
+/* iPhone・iPad：新しいタブで PDF を開く（共有 → プリント／ファイルに保存）。タブが開けない設定なら、この画面で開く（戻るでアプリに戻る。入力は端末に保存済み） */
+function 総括PDFを開く(){
+  const url=総括PDFのURL();
+  const w=window.open(url,"_blank");
+  if(!w)location.href=url;
+  setTimeout(()=>URL.revokeObjectURL(url),10*60*1000);
+}
+function 総括PDFを保存(){
+  const url=総括PDFのURL();
+  const a=document.createElement("a");a.href=url;a.download=総括PDFの名前();document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60*1000);
+}
 function openSummary(){
   const frag=document.createDocumentFragment();
   const head=el("div","phead",
     '<div class="sym">総括</div><div class="nm">'+(ST.名||'')+'／交通局へ出す様式のまま／A4横'+ST.総括.頁.length+'ページ</div>');
-  const pr=el("button","prbtn","印刷");pr.type="button";
-  pr.onclick=()=>window.print();head.appendChild(pr);
+  const 手=el("span","prbtns");
+  const pr=el("button","prbtn",iOS端末()?"印刷（PDF）":"印刷");pr.type="button";
+  pr.onclick=()=>{if(iOS端末())総括PDFを開く();else window.print();};手.appendChild(pr);
+  if(!iOS端末()){const pd=el("button","prbtn","PDF");pd.type="button";pd.onclick=総括PDFを保存;手.appendChild(pd);}
+  head.appendChild(手);
   const x=el("button","x","×");x.onclick=closePop;head.appendChild(x);
   frag.appendChild(head);
   const body=el("div","pbody rep");

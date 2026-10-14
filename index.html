@@ -452,7 +452,7 @@ svg.xlsvg{display:block}
     <div class="chkrow">
       <label class="chk" id="voltBar">
         <input type="checkbox" id="voltChk" checked>
-        <span class="tx">電圧は前回どおり<span class="sub">6盤・16項目を確定</span></span>
+        <span class="tx">電圧は前回通り<span class="sub" id="voltSub">—</span></span>
       </label>
       <label class="chk neutral" id="hideBar">
         <input type="checkbox" id="hideChk" checked>
@@ -1591,7 +1591,7 @@ function badHist(f,arr,i){
 }
 
 
-const info={date:new Date().toISOString().slice(0,10),no:"15",time:"16:00",whoA:"",whoB:""};
+const info={date:(d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"))(new Date()),no:"15",time:"16:00",whoA:"",whoB:""};
 const val={},stat={},meta={};
 ITEMS.forEach(it=>it.f.forEach(f=>{
   const k=it.id+"."+f.id;
@@ -1611,7 +1611,8 @@ function voltOn(ids){
   const t=VKEYS.filter(([k])=>!ids||ids.includes(k.split(".")[0]));
   return t.length>0&&t.every(([k,p])=>val[k]===(p==null?"":String(p)));
 }
-setVolt(true);VKEYS.forEach(([k])=>{delete meta[k];});delete meta["@点検日"];delete meta["@時刻"];   /* 起動時の既定は入力に数えない（相方の入力を上書きしないため） */
+setVolt(true);VKEYS.forEach(([k])=>{delete meta[k];});delete meta["@点検日"];delete meta["@時刻"];
+{const 盤=new Set(VKEYS.map(([k])=>k.split(".")[0])).size;document.getElementById("voltSub").textContent=盤?`${盤}盤・${VKEYS.length}項目を確定`:"電圧の欄はありません";}   /* 起動時の既定は入力に数えない（相方の入力を上書きしないため） */
 let hideVolt=true;
 
 const keys=ITEMS.flatMap(it=>it.f.filter(counted).map(f=>it.id+"."+f.id));
@@ -1714,7 +1715,7 @@ function draw(){
   $("#voltChk").checked=vo;
   $("#voltBar").classList.toggle("off",!vo);
   $("#hideChk").checked=hideVolt;
-  $("#hideSub").textContent=hideVolt?hidden+"盤を非表示中":"すべて表示中";
+  $("#hideSub").textContent=hideVolt?hidden+"盤を非表示中":"全て表示中";
   pushSoon();
 }
 
@@ -1812,7 +1813,7 @@ function openMemo(it){
   body.appendChild(grid);
 
   body.appendChild(el("div","mhint",
-    "写真はカメラ撮影・ライブラリのどちらからでも選べます。リロードすると点検値と一緒に消えるので、その日のうちに転記してください。"));
+    "写真はカメラ撮影・ライブラリのどちらからでも選べます。写真とメモはこの端末にだけ残り、相方の端末や総括には出ません。"));
   frag.appendChild(body);
 
   const foot=el("div","pfoot");
@@ -1877,30 +1878,38 @@ function dwgButton(it,fld){
 /* ============ メーター読み取り（写真→AI→数値） ============ */
 /* ↓ Cloudflare Worker を立てたら、そのURLをここに入れるだけで動きます。
    空のままなら「読み取り先が未設定」と出るだけで、手入力の邪魔はしません。 */
-const OCR_ENDPOINT="";
+const OCR_ENDPOINT=(()=>{try{const u=new URLSearchParams(location.search).get("読み取り");if(u)return u.replace(/\/$/,"")+"/read";}catch(e){}return "https://tenken-ocr.misty-paper-4386.workers.dev/read";})();
 /* 読み取りを付ける項目。現場ごとにメーターが違うので、まずは数字がそのまま並ぶ2つだけ */
-const OCR_TYPES=["hour","kwh"];
+const OCR_TYPES=["hour","kwh","count"];
 
 /* 前回値から桁の形を作る。「5桁＋小数1桁」と先に教えると誤読が激減する */
 function digitHint(f){
+  if(f.prev==null||f.prev==="")return "";   /* 前回値が無ければ桁の手掛かりも無し */
   const [a,b]=String(f.prev).split(".");
   return `整数${a.replace("-","").length}桁`+(b?`＋小数${b.length}桁`:"（小数なし）");
 }
 async function readMeter(it,f,dataURL){
   if(!OCR_ENDPOINT)throw new Error("未設定");
-  const r=await fetch(OCR_ENDPOINT,{
-    method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      item:it.sym,label:f.lab,unit:f.unit||"",prev:f.prev,
-      format:digitHint(f),image:dataURL
-    })
-  });
+  const ctl=new AbortController(),tm=setTimeout(()=>ctl.abort(),90000);
+  let r;
+  try{
+    r=await fetch(OCR_ENDPOINT,{
+      method:"POST",headers:{"Content-Type":"text/plain"},cache:"no-store",signal:ctl.signal,   /* text/plain：中継と同じく事前確認の往復を起こさない */
+      body:JSON.stringify({
+        code:合言葉(),item:it.sym,label:f.lab,unit:f.unit||"",prev:f.prev,
+        format:digitHint(f),image:dataURL
+      })
+    });
+  }catch(e){throw new Error(e.name==="AbortError"?"時間切れ":"読み取り先に届きません");}
+  finally{clearTimeout(tm);}
+  if(r.status===401)throw new Error("合言葉が違います");
+  if(r.status===503)throw new Error("読み取り先の準備ができていません");
   if(!r.ok)throw new Error("HTTP "+r.status);
   const raw=await r.text();
-  let t=raw;
-  try{const j=JSON.parse(raw);t=j.value??j.text??j.result??raw;}catch(e){}
+  let t=raw,理由="";
+  try{const j=JSON.parse(raw);t=j.value??j.text??j.result??raw;理由=j.reason||"";}catch(e){}
   const n=String(t).replace(/[^0-9.\-]/g,"");
-  if(n===""||isNaN(parseFloat(n)))throw new Error("数値を読めません");
+  if(n===""||isNaN(parseFloat(n)))throw new Error(理由||"数値を読めません");
   return n;
 }
 function camButton(it,f,input,fld){
@@ -1932,10 +1941,8 @@ function camButton(it,f,input,fld){
     const again=el("button","mini","撮り直す");again.type="button";again.onclick=()=>{clear();file.click();};
     const go=el("button","mini go","この写真で解析");go.type="button";
     go.onclick=async()=>{
-      if(!OCR_ENDPOINT){
-        say("APIキーが未設定です。会社から発行されたら、読み取り先のURLを登録すると使えるようになります。");
-        return;
-      }
+      if(!OCR_ENDPOINT){say("読み取り先が未設定です。");return;}
+      if(!合言葉()){say("点検情報で「相方と共有する合言葉」を入れると、写真の読み取りが使えます。");return;}
       clear();go.disabled=true;go.textContent="解析中…";
       try{
         const n=await readMeter(it,f,shot);
@@ -1946,7 +1953,7 @@ function camButton(it,f,input,fld){
         go.disabled=false;go.textContent="この写真で解析";
       }
     };
-    const del=el("button","mini","やめる");del.type="button";
+    const del=el("button","mini","中止");del.type="button";
     del.onclick=()=>{shot=null;clear();render();};
     rw.appendChild(again);rw.appendChild(go);rw.appendChild(del);
     pane.appendChild(rw);
@@ -1975,7 +1982,7 @@ function openItem(it,noFocus){
     cb.onchange=()=>{setVolt(cb.checked,[it.id]);openItem(it);};
     lab.appendChild(cb);
     lab.insertAdjacentHTML("beforeend",
-      '<span class="tx">この盤は前回どおり（点検済み）<span class="sub">外すと空欄に戻り、実測値を入力できます</span></span>');
+      '<span class="tx">この盤は前回通り（点検済み）<span class="sub">外すと空欄に戻り、実測値を入力できます</span></span>');
     body.appendChild(lab);
   }
   if(TIPS[it.id])body.appendChild(el("div","tip item",TIPS[it.id]));
@@ -2021,7 +2028,7 @@ function openItem(it,noFocus){
       const row=el("div","row");
       const i=document.createElement("input");i.type=f.t;i.value=val[k]||"";
       row.appendChild(i);
-      const b=el("button","same",(f.t==="date"?"点検日どおり<br>":"時刻どおり<br>")+(f.t==="date"?(info.date||""):(info.time||"")));b.type="button";
+      const b=el("button","same",(f.t==="date"?"点検日通り<br>":"時刻通り<br>")+(f.t==="date"?(info.date||""):(info.time||"")));b.type="button";
       b.onclick=()=>{i.value="";i.dispatchEvent(new Event("input"));};
       row.appendChild(b);fld.appendChild(row);
       const msg=el("div","msg show ok");fld.appendChild(msg);
@@ -2037,7 +2044,7 @@ function openItem(it,noFocus){
       row.appendChild(i);
       if(f.unit)row.appendChild(el("div","unit",f.unit));
       if((f.t==="volt"||f.t==="temp")&&f.prev!=null&&f.prev!==""){
-        const b=el("button","same","前回どおり<br>"+f.prev);b.type="button";
+        const b=el("button","same","前回通り<br>"+f.prev);b.type="button";
         b.onclick=()=>{i.value=f.prev;i.dispatchEvent(new Event("input"));};
         row.appendChild(b);
       }
@@ -2228,7 +2235,7 @@ $("#infoBar").onclick=()=>{
   const ni=document.createElement("input");ni.type="number";ni.inputMode="numeric";ni.value=info.no;ni.oninput=()=>{info.no=ni.value;saveSoon();pushSoon();前回を合わせる予約();};
   n.appendChild(ni);body.appendChild(n);
   const 次=el("button","btn ghost nextround","次の回を始める");次.type="button";次.onclick=次の回へ;body.appendChild(次);
-  body.appendChild(el("div","share-note nextnote","いまの回を終えて No. を1つ進めます。入力は空になり、いまの回の値が次の回の「前回」になります。"));
+  body.appendChild(el("div","share-note nextnote","今の回を終えて No. を1つ進めます。入力は空になり、今の回の値が次の回の「前回」になります。"));
   body.appendChild(el("div","lbl","時刻"));
   const ch=el("div","chips");ch.style.marginBottom="14px";
   TIMES.forEach(t=>{const b=el("button","chip",t);b.type="button";b.setAttribute("aria-pressed",info.time===t);
@@ -2251,12 +2258,12 @@ $("#infoBar").onclick=()=>{
   ci.placeholder="会社で決めた合言葉";ci.value=合言葉();ci.style.fontFamily="var(--jp)";ci.style.fontSize="17px";
   ci.oninput=()=>{try{localStorage.setItem(合言葉キー,ci.value.trim());}catch(e){}同期.状態="";pushSoon();前回を合わせる予約();};
   sh.appendChild(ci);
-  sh.appendChild(el("div","share-note","同じ駅・同じ No. を開いている人と、入力した値と「いまどのカードを見ているか」を分け合います。"));
+  sh.appendChild(el("div","share-note","同じ駅・同じ No. を開いている人と、入力した値と「今どのカードを見ているか」を分け合います。"));
   body.appendChild(sh);
   frag.appendChild(body);
   const foot=el("div","pfoot");
   const rs=el("button","btn ghost","やり直す");
-  rs.onclick=()=>{if(!confirm("入力した数値をすべて消します。よろしいですか。"))return;
+  rs.onclick=()=>{if(!confirm("入力した数値を全て消します。よろしいですか。"))return;
     keys.forEach(k=>{val[k]="";stat[k]="";});closePop();};
   const b=el("button","btn","確定して一覧へ");b.onclick=closePop;
   foot.appendChild(rs);foot.appendChild(b);
@@ -2353,7 +2360,7 @@ async function sync(){
     if(r.status===401)同期.状態="合言葉が違います";
     else if(!r.ok)同期.状態="中継が応えません（"+r.status+"）";
     else res=await r.json();
-  }catch(e){同期.状態="つながっていません";}
+  }catch(e){同期.状態="接続できません";}
   同期.送信中=false;
   if(!res||room!==部屋()){paintBuddy();return;}
   同期.状態="";同期.最終=Date.now();同期.ずれ=res.now-Date.now();同期.相方=res.p||{};
@@ -2438,8 +2445,8 @@ function paintBuddy(){
   const it=x.here?ITEMS.find(i=>i.id===x.here):null;
   bar.classList.toggle("off",!居る);
   txt.innerHTML=`<b>${字を逃がす(x.名)}</b> さん　`+
-    (居る?(it?`いま <b>${symHTML(字を逃がす(it.sym))}</b>`:"一覧を見ています"):`${経過(x.前)}前まで`)+
-    `　${数} 項目入力`+(a.length>1?`<span class="ago">ほか${a.length-1}人</span>`:"");
+    (居る?(it?`今 <b>${symHTML(字を逃がす(it.sym))}</b>`:"一覧を見ています"):`${経過(x.前)}前まで`)+
+    `　${数} 項目入力`+(a.length>1?`<span class="ago">他${a.length-1}人</span>`:"");
 }
 setTimeout(sync,0);   /* 起動（保存の読み込み・No. の初期値）が済んでから */
 setInterval(()=>{if(document.visibilityState==="visible")sync();else paintBuddy();},同期の間隔);

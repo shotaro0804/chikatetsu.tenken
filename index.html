@@ -532,6 +532,8 @@ const 字幅表={"MS-Mincho":{"設計":[[32,126,128],[160,166,128],[167,168,256]
       if (/^A\/P/i.test(sec.slice(i))) { t.push({ k: "午前午後", v: "A/P" }); i += 3; continue; }
       const run = (ch) => { let j = i; while (j < sec.length && sec[j].toLowerCase() === ch) j++; const s = sec.slice(i, j); i = j; return s; };
       const lc = c.toLowerCase();
+      /* aaa＝曜日の1字（火）、aaaa＝「火曜日」（日本語の Excel。中洲川端の点検日 2026-10-20） */
+      if (lc === "a" && /^aaa/i.test(sec.slice(i))) { t.push({ k: "日時", v: run("a") }); continue; }
       if ("ymdhsge".includes(lc) && lc !== "e" || (lc === "e" && /[ymdhsg]/i.test(sec))) { t.push({ k: "日時", v: run(lc) }); continue; }
       if (c === "0" || c === "#" || c === "?" || c === "." || c === "," || c === "%") { t.push({ k: "数", v: c }); i++; continue; }
       if (c === "E" || c === "e") { t.push({ k: "指数", v: sec.slice(i, i + 2) }); i += 2; continue; }
@@ -668,6 +670,7 @@ const 字幅表={"MS-Mincho":{"設計":[[32,126,128],[160,166,128],[167,168,256]
         else r = s.length === 1 ? String(t.m) : s.length === 2 ? String(t.m).padStart(2, "0") : String(t.m) + "月";
       } else if (s[0] === "g") { const w = 和暦(t.y, t.m, t.d); r = s.length === 1 ? w[0] : s.length === 2 ? w[1] : w[2]; }
       else if (s[0] === "e") { const w = 和暦(t.y, t.m, t.d); r = s.length === 1 ? String(w[3]) : String(w[3]).padStart(2, "0"); }
+      else if (s[0] === "a") r = s.length === 3 ? 曜[t.w] : 曜[t.w] + "曜日";
       else r = x.v;
       out.push({ k: "字", v: r });
     }
@@ -2698,6 +2701,7 @@ function 行を作る(rf){
   const 退避=Object.assign({},val);
   for(const k of Object.keys(val))delete val[k];
   for(const k in rf)if(k[0]!=="@")val[k]=rf[k]==null?"":String(rf[k]);
+  前回.行の日=日連番(日);   /* 式が点検日の列を引くとき（冷凍機：スロット値）は、この行の日 */
   try{
     for(const k of Object.keys(ST.導出表||{})){
       if(k in 行)continue;
@@ -2709,6 +2713,7 @@ function 行を作る(rf){
   }finally{
     for(const k of Object.keys(val))delete val[k];
     Object.assign(val,退避);
+    前回.行の日=null;
   }
   /* 前回差の欄が見ている列（運転時間・使用電力量など）：（今回−前回）×係数 */
   for(const [k,d] of Object.entries(前回.前回差)){
@@ -3079,7 +3084,7 @@ function 生値(c){
     case"定数":return sp.値;                                       /* 蓄積シートの次の行に直書きされた値（水道メーターの AG28） */
     case"点検者":{const s=String(info.whoA||"").trim();return s===""?(sp.空白?"":null):s;}   /* 現場用の点検者の欄（福岡空港）：点検情報の点検者（自分）。転記でも同じ名前を点検者の列に書く */
     case"備考":{const v=val[XLKEY(sp.キー)];const s=v==null?"":String(v).trim();return s===""?null:s;}   /* 空の備考は空白1つを転記する慣わし＝何も出ない */
-    case"選択":{const v=val[XLKEY(sp.キー)];const s=v==null?"":String(v).trim();return s===""?0:s;}      /* 未選択は Excel の INDEX と同じく 0 */
+    case"選択":{const v=val[XLKEY(sp.キー)];const s=v==null?"":String(v).trim();return s===""?(sp.空白?"":0):s;}      /* 未選択は Excel の INDEX と同じく 0（IF(ISBLANK…) の欄は空：中洲川端の結露確認） */
     case"差":{
       /* Excel は蓄積シートで「今回 − 前回」を引き算している。字が入っていれば #VALUE! になる */
       const ak=XLKEY(sp.キー),a=桁丸め(入力の値(ak),丸[0]);
@@ -3185,9 +3190,14 @@ function スロット値(key,ずれ,深さ){
   深さ=深さ||0; if(深さ>20)return{エラー:"#REF!"};
   const ak=ST.逆引き&&ST.逆引き[key];
   if(ずれ<0){
+    /* 冷凍機（回は暦の日）：前の行は Excel と同じく「前の日の行そのもの」（カードの前回は日割の前回値で最後に入れた値に替わっているので使わない。
+       中洲川端の FES の前回読み・フィルターの記録が、前の行を引いて持ち越す式） */
+    if(ST.日割)return 履歴の値(key,-ずれ);
     if(ak){const f=fieldByKey(ak);return f&&f.prev!=null&&f.prev!==""?f.prev:null;}
     return 履歴の値(key,-ずれ);
   }
+  /* 冷凍機：式が点検日の列を引くとき（中洲川端のフィルターの記録の日付）、その回の点検日（前の回の行を作っているときはその行の日） */
+  if(ST.日割&&ST.点検情報&&key===ST.点検情報.日&&ずれ===0)return 前回&&前回.行の日!=null?前回.行の日:日連番(info.date);
   if(ak)return 入力の値(ak);
   const d=ST.導出表&&ST.導出表[key];
   if(!d)return 履歴の値(key,1);                     /* 入力欄にしていない列（ﾎﾟﾝﾌﾟ履歴の名称など）：最後の値のまま */

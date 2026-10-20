@@ -62,10 +62,14 @@ button{font-family:var(--jp);cursor:pointer;border:none;background:none;color:in
   padding:0 6px;border-radius:8px;line-height:1.6;vertical-align:1px;white-space:nowrap}
 .share-note{font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:6px}
 /* 前回値の出どころ（前回.js） */
-.slim.zenkai{font-size:12px;color:var(--muted);cursor:default}
+.slim.zenkai{font-size:14px;line-height:1.5;color:var(--muted);cursor:default}
 .slim.zenkai.warn{color:var(--hi-dim);border-color:var(--hi);background:var(--hi-soft)}
 .btn.nextround{width:100%;margin-top:4px}
 .share-note.nextnote{margin-bottom:16px}
+/* テンキーの切り替え（点検情報） */
+.tkopt{display:flex;align-items:flex-start;gap:10px;margin:4px 0 16px;font-size:15px;font-weight:700;line-height:1.45;cursor:pointer}
+.tkopt input{width:22px;height:22px;min-height:0;margin:2px 0 0;padding:0;flex:0 0 auto;accent-color:var(--ink)}
+.tkopt .sub{display:block;font-size:14px;font-weight:400;color:var(--muted)}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
 
 /* ===== グループ ===== */
@@ -1518,6 +1522,25 @@ function 時刻の字(v){
 }
 
 /* 駅定義をアプリの形に開く。駅を変えるたびに作り直す */
+/* 帳票の紙。駅の総括は A4 横（下の印刷の CSS が決め打ちで持つ）。冷凍機の現場用は B5 縦など、頁の大きさが違う帳票だけ CSS を足す */
+function 紙の向き横A4(p){return !p||(Math.abs(p.幅-297)<2&&Math.abs(p.高さ-210)<2);}
+function 紙の名(st){
+  const p=st&&st.総括&&st.総括.頁&&st.総括.頁[0];
+  if(紙の向き横A4(p))return"A4横";
+  const 近=(a,b)=>Math.abs(a-b)<2;
+  for(const [名,w,h] of [["A4",210,297],["B5",182,257],["A3",297,420],["B4",257,364]]){
+    if(近(p.幅,w)&&近(p.高さ,h))return 名+"縦";
+    if(近(p.幅,h)&&近(p.高さ,w))return 名+"横";
+  }
+  return Math.round(p.幅)+"×"+Math.round(p.高さ)+"mm";
+}
+function 紙のCSS(st){
+  const p=st&&st.総括&&st.総括.頁&&st.総括.頁[0];
+  if(紙の向き横A4(p))return"";
+  const w=p.幅.toFixed(1),h=p.高さ.toFixed(1);
+  return "\n.svsheet{width:"+w+"mm}\n@media print{@page{size:"+w+"mm "+h+"mm;margin:0}"+
+    ".svsheet{width:"+w+"mm;height:"+h+"mm}svg.xlsvg{width:"+w+"mm;height:"+h+"mm}}";
+}
 function 駅を載せる(st){
   ST=st;
   INSPECTORS=(st.点検者||[]).slice();
@@ -1549,7 +1572,7 @@ function 駅を載せる(st){
   HIST=((st.履歴&&st.履歴.回)||[]).map((no,i)=>({no:no,d:日列?xlDate(日列[i]):""}));
   /* 総括のCSS（寸法と文字サイズは駅ごとに違う） */
   const sc=document.getElementById("stcss");
-  if(sc)sc.textContent=st.css||"";
+  if(sc)sc.textContent=(st.css||"")+紙のCSS(st);
   const t=st.名||st.ラベル||"";
   document.title=t+" 点検入力";
 }
@@ -1722,12 +1745,14 @@ function draw(){
 /* ============ ポップアップ ============ */
 function openPop(node,wide){
   $("#panel").classList.remove("xlwide");
+  テンキー.隠す();
   $("#panel").innerHTML="";$("#panel").appendChild(node);
   $("#panel").classList.toggle("wide",!!wide);
   $("#pop").classList.add("show");$("#app").classList.add("blurred");
   document.body.style.overflow="hidden";
 }
 function closePop(){
+  テンキー.隠す();
   $("#pop").classList.remove("show");$("#app").classList.remove("blurred");
   document.body.style.overflow="";curItem=null;draw();
 }
@@ -2040,7 +2065,7 @@ function openItem(it,noFocus){
     }else{
       const row=el("div","row");
       const i=document.createElement("input");
-      i.type="number";i.inputMode="decimal";i.step="any";i.placeholder="—";i.value=val[k]||"";
+      i.type="number";i.inputMode="decimal";i.step="any";i.placeholder="—";i.value=val[k]||"";テンキー.つなぐ(i);
       row.appendChild(i);
       if(f.unit)row.appendChild(el("div","unit",f.unit));
       if((f.t==="volt"||f.t==="temp")&&f.prev!=null&&f.prev!==""){
@@ -2093,6 +2118,155 @@ function openItem(it,noFocus){
 }
 
 
+
+/* ============ 数字のテンキー（iPad など） ============ */
+/* 36駅展開/テンキー.js（アプリ組み立て.js が 相方.js・前回.js の後に埋め込む）。
+   iPad には iPhone のような数字だけのキーボードが無く、数字の欄（inputmode=decimal）でも普通のキーボードが出て打ちにくい
+   （2026-10-20 ユーザー「ipadだと数値入力の時通常キーボードになってて打ちにくい」）。
+   タブレットでは数字の欄を読み取り専用にして端末のキーボードを出さず、画面の下にアプリのテンキーを出す。
+     ・出す端末：iPad（iPadOS の Safari は「Macintosh」と名乗るので、触れる点の数で見分ける）・画面の短い辺が 600 以上のタッチ端末。
+       iPhone は端末の数字キーボードのまま、PC は今まで通り。点検情報の「数字はテンキーで入れる」で端末ごとに切り替えられる
+     ・キー：0〜9・小数点・マイナス・1字消す・クリア・次の欄（カードの最後の欄では「次の機器 ›」＝カードの下の「次へ ›」）・閉じる
+     ・値を変えたら input の合図を送る（アプリの確かめ・保存・相方への送信は今まで通り動く）
+     ・外付けのキーボード（iPad の Magic Keyboard など）でも数字・小数点・消す・Enter（次の欄）が打てる */
+var テンキー=(function(){
+  const 設定キー="tenken:テンキー";   /* "on" / "off"。無ければ端末で決める */
+  function タブレットか(){
+    try{
+      const ua=navigator.userAgent||"",点=navigator.maxTouchPoints||0;
+      if(/iPad/.test(ua)||(/Macintosh/.test(ua)&&点>1))return true;   /* iPadOS は Mac と名乗る */
+      if(/iPhone|iPod/.test(ua))return false;
+      const 粗い=window.matchMedia&&matchMedia("(pointer: coarse)").matches;
+      return !!粗い&&Math.min(screen.width,screen.height)>=600;
+    }catch(e){return false;}
+  }
+  function 設定(){try{return localStorage.getItem(設定キー);}catch(e){return null;}}
+  function 使う(){const s=設定();return s==="on"?true:s==="off"?false:タブレットか();}
+  function 切り替える(on){try{localStorage.setItem(設定キー,on?"on":"off");}catch(e){}}
+
+  let 板=null,今=null,隠す予約=null;
+  function 作る(){
+    if(板)return 板;
+    const st=document.createElement("style");
+    st.textContent=
+      "#tenkey{position:fixed;left:0;right:0;bottom:0;z-index:80;display:none;background:#E9E6DC;border-top:1px solid var(--line2);"+
+      "padding:8px 10px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(31,30,28,.18);touch-action:manipulation;user-select:none;-webkit-user-select:none}"+
+      "#tenkey.show{display:block}"+
+      "#tenkey .tk-in{max-width:560px;margin:0 auto}"+
+      "#tenkey .tk-head{display:flex;align-items:center;gap:10px;min-height:40px;padding:0 2px 8px}"+
+      "#tenkey .tk-lab{flex:1;min-width:0;font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"+
+      "#tenkey .tk-val{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--ink)}"+
+      "#tenkey .tk-close{flex:0 0 auto;min-height:40px;padding:0 14px;border-radius:8px;border:1.5px solid var(--line2);background:var(--white);font-size:15px;font-weight:700;color:var(--ink)}"+
+      "#tenkey .tk-grid{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:58px;gap:8px}"+
+      "#tenkey .tk{border-radius:10px;background:var(--white);border:1px solid var(--line2);box-shadow:0 1px 0 rgba(31,30,28,.18);"+
+      "font-family:var(--mono);font-size:28px;font-weight:700;color:var(--ink);display:flex;align-items:center;justify-content:center}"+
+      "#tenkey .tk.w{font-family:var(--jp);font-size:17px}"+
+      "#tenkey .tk.go{grid-row:span 2;background:var(--ink);color:#fff;border-color:var(--ink);font-family:var(--jp);font-size:18px;line-height:1.3;text-align:center}"+
+      "#tenkey .tk.on{background:var(--hi-soft);border-color:var(--hi)}"+
+      "#tenkey .tk.go.on{background:var(--hi-dim)}"+
+      /* テンキーが出ている間は、カードをテンキーの上に寄せる（カードの下の「確定して一覧へ」「次へ ›」も隠れない） */
+      "body.tk-on .pop{align-items:flex-end;padding-bottom:calc(var(--tk-h,310px) + 8px)}"+
+      "body.tk-on .panel{max-height:calc(100vh - var(--tk-h,310px) - 22px);max-height:calc(100dvh - var(--tk-h,310px) - 22px)}"+
+      /* 横にした iPad：テンキーを右に出し、カードは左で縦をいっぱいに使う（下に出すとカードが1欄ぶんしか見えない） */
+      "@media (orientation:landscape) and (min-width:900px){"+
+        "#tenkey{left:auto;right:16px;top:50%;bottom:auto;transform:translateY(-50%);width:400px;border:1px solid var(--line2);border-radius:14px;padding:12px 12px 14px}"+
+        "body.tk-on .pop{align-items:center;padding-bottom:14px;padding-right:432px}"+
+        "body.tk-on .panel{max-height:88vh;max-height:88dvh}}"+
+      "input.tk-now{border:2px solid var(--hi) !important;background:var(--hi-soft) !important}"+
+      "input[data-tenkey]{caret-color:transparent}";
+    document.head.appendChild(st);
+    板=document.createElement("div");板.id="tenkey";
+    板.innerHTML='<div class="tk-in"><div class="tk-head"><div class="tk-lab"></div><div class="tk-val"></div>'+
+      '<button type="button" class="tk-close" data-k="閉">閉じる ▾</button></div><div class="tk-grid">'+
+      ["7","8","9","⌫","4","5","6","クリア","1","2","3","次","0",".","−"].map(k=>{
+        const w=k==="⌫"||k==="クリア"?" w":k==="次"?" go":"";
+        return '<button type="button" tabindex="-1" class="tk'+w+'" data-k="'+k+'">'+(k==="次"?"次の欄":k)+"</button>";
+      }).join("")+"</div></div>";
+    document.body.appendChild(板);
+    /* 押した瞬間に効かせ、欄からフォーカスを外さない */
+    板.addEventListener("pointerdown",e=>{
+      const b=e.target.closest("button");e.preventDefault();if(!b)return;
+      b.classList.add("on");setTimeout(()=>b.classList.remove("on"),120);
+      押す(b.dataset.k);
+    });
+    板.addEventListener("mousedown",e=>e.preventDefault());
+    板.addEventListener("click",e=>e.preventDefault());
+    return 板;
+  }
+  /* 欄の名前（カードの見出しの欄の名前と、機器の記号） */
+  function 名前(i){
+    const fld=i.closest(".fld"),b=fld&&fld.querySelector(".lab b");
+    const lbl=!b&&i.parentElement&&i.parentElement.querySelector(".lbl");   /* 点検情報の「点検表 No.」 */
+    const sym=document.querySelector("#panel .phead .sym");
+    return ((sym?sym.textContent.trim()+"　":"")+(b?b.textContent.trim():lbl?lbl.textContent.trim():"")).trim();
+  }
+  function 並び(){return [...document.querySelectorAll("#panel input[data-tenkey]")].filter(x=>x.offsetParent!==null);}
+  function 次のボタン(){return [...document.querySelectorAll("#panel .pfoot button")].find(b=>/次へ/.test(b.textContent));}
+  function 見出しを直す(){
+    if(!板||!今)return;
+    板.querySelector(".tk-lab").textContent=名前(今);
+    板.querySelector(".tk-val").textContent=今.value||"";
+    const 欄=並び(),後=欄.indexOf(今)<欄.length-1;
+    板.querySelector('[data-k="次"]').innerHTML=後?"次の欄":次のボタン()?"次の<br>機器 ›":"完了";
+  }
+  function 出す(i){
+    作る();clearTimeout(隠す予約);
+    if(今&&今!==i)今.classList.remove("tk-now");
+    今=i;i.classList.add("tk-now");
+    板.classList.add("show");document.body.classList.add("tk-on");
+    document.documentElement.style.setProperty("--tk-h",板.offsetHeight+"px");
+    見出しを直す();
+    setTimeout(()=>{try{i.scrollIntoView({block:"nearest"});}catch(e){}},30);
+  }
+  function 隠す(){
+    if(今)今.classList.remove("tk-now");今=null;
+    if(板)板.classList.remove("show");document.body.classList.remove("tk-on");
+  }
+  function 入れる(v){
+    if(!今)return;
+    今.value=v;今.dispatchEvent(new Event("input",{bubbles:true}));
+    見出しを直す();
+  }
+  function 押す(k){
+    if(!今)return;
+    const v=今.value||"";
+    if(/^\d$/.test(k)){if(v.replace(/[^\d]/g,"").length<12)入れる(v==="0"?k:v==="-0"?"-"+k:v+k);}
+    else if(k==="."){if(!v.includes("."))入れる((v===""||v==="-")?v+"0.":v+".");}
+    else if(k==="−"||k==="-"){入れる(v.startsWith("-")?v.slice(1):"-"+v);}
+    else if(k==="⌫"){入れる(v.slice(0,-1));}
+    else if(k==="クリア"){入れる("");}
+    else if(k==="次"){
+      const 欄=並び(),n=欄.indexOf(今);
+      if(n>=0&&n<欄.length-1){欄[n+1].focus();出す(欄[n+1]);}
+      else{const nb=次のボタン();const 前=今;隠す();前.blur();if(nb)nb.click();}
+    }
+    else if(k==="閉"){const 前=今;隠す();if(前)前.blur();}
+  }
+  /* アプリが数字の欄を作ったときに呼ぶ。テンキーを使う端末では端末のキーボードを出さない */
+  function つなぐ(i){
+    if(!使う())return;
+    i.type="text";i.readOnly=true;i.inputMode="none";
+    i.setAttribute("autocomplete","off");i.setAttribute("autocorrect","off");i.setAttribute("autocapitalize","off");i.spellcheck=false;
+    i.dataset.tenkey="1";
+    i.addEventListener("focus",()=>出す(i));
+    i.addEventListener("click",()=>{if(今!==i){i.focus();出す(i);}});
+    i.addEventListener("blur",()=>{clearTimeout(隠す予約);隠す予約=setTimeout(()=>{if(今===i&&document.activeElement!==i)隠す();},60);});
+    /* 外付けのキーボード */
+    i.addEventListener("keydown",e=>{
+      if(今!==i)出す(i);
+      const k=e.key;
+      if(/^\d$/.test(k)||k==="."||k==="-"){e.preventDefault();押す(k);}
+      else if(k==="Decimal"){e.preventDefault();押す(".");}   /* 古い Safari のテンキーの小数点 */
+      else if(k==="Backspace"){e.preventDefault();押す("⌫");}
+      else if(k==="Delete"){e.preventDefault();押す("クリア");}
+      else if(k==="Enter"){e.preventDefault();押す("次");}
+      else if(k==="Escape"){e.preventDefault();押す("閉");}
+    });
+  }
+  /* カードを閉じた・切り替えたときに残らないように */
+  document.addEventListener("focusin",e=>{if(今&&e.target!==今&&!(板&&板.contains(e.target)))隠す();});
+  return {使う,切り替える,つなぐ,隠す,タブレットか};
+})();
 
 /* 誰が入れたかの表示 */
 function byline(fld,k){
@@ -2228,14 +2402,20 @@ $("#infoBar").onclick=()=>{
   const body=el("div","pbody");
   const d=el("div");d.style.marginBottom="12px";
   d.appendChild(el("div","lbl","点検日"));
-  const di=document.createElement("input");di.type="date";di.value=info.date;di.oninput=()=>{info.date=di.value;mark("@点検日");pushSoon();前回を合わせる予約();};
+  const di=document.createElement("input");di.type="date";di.value=info.date;di.oninput=()=>{info.date=di.value;if(ST.日割){const n=日割の回(info.date);if(n){info.no=String(n);ni.value=info.no;}}mark("@点検日");pushSoon();前回を合わせる予約();};
   d.appendChild(di);body.appendChild(d);
   const n=el("div");n.style.marginBottom="14px";n.style.maxWidth="150px";
   n.appendChild(el("div","lbl","点検表 No."));
-  const ni=document.createElement("input");ni.type="number";ni.inputMode="numeric";ni.value=info.no;ni.oninput=()=>{info.no=ni.value;saveSoon();pushSoon();前回を合わせる予約();};
+  const ni=document.createElement("input");ni.type="number";ni.inputMode="numeric";ni.value=info.no;テンキー.つなぐ(ni);ni.oninput=()=>{info.no=ni.value;if(ST.日割){const d=日割の日(parseInt(ni.value,10));if(d&&d!==info.date){info.date=d;di.value=d;mark("@点検日");}}saveSoon();pushSoon();前回を合わせる予約();};
   n.appendChild(ni);body.appendChild(n);
   const 次=el("button","btn ghost nextround","次の回を始める");次.type="button";次.onclick=次の回へ;body.appendChild(次);
   body.appendChild(el("div","share-note nextnote","今の回を終えて No. を1つ進めます。入力は空になり、今の回の値が次の回の「前回」になります。"));
+  {
+    const tk=el("label","tkopt");const cb=document.createElement("input");cb.type="checkbox";cb.checked=テンキー.使う();
+    cb.onchange=()=>{テンキー.切り替える(cb.checked);};
+    tk.appendChild(cb);tk.appendChild(el("span","",'数字はアプリのテンキーで入れる<span class="sub">iPad など。次にカードを開いたときから変わります</span>'));
+    body.appendChild(tk);
+  }
   body.appendChild(el("div","lbl","時刻"));
   const ch=el("div","chips");ch.style.marginBottom="14px";
   TIMES.forEach(t=>{const b=el("button","chip",t);b.type="button";b.setAttribute("aria-pressed",info.time===t);
@@ -2430,7 +2610,7 @@ function 相方の居場所(id){const a=相方たち().find(x=>x.here===id&&x.�
 function 居場所の印(){return 相方たち().filter(x=>x.前<居ると見なす).map(x=>x.名+":"+x.here).join("|");}
 function paintBuddy(){
   const bar=$("#buddyBar"),txt=$("#buddyTxt");if(!bar)return;
-  if(試しモード){bar.style.display="none";return;}
+  if(試しモード||(typeof ST!=="undefined"&&ST.一人)){bar.style.display="none";return;}   /* 1人で点検する帳票（冷凍機）は帯を出さない */
   bar.style.display="";
   bar.onclick=()=>$("#infoBar").click();   /* 合言葉や名前は点検情報で入れる */
   const 止め=t=>{bar.classList.add("off");txt.innerHTML=t;};
@@ -2477,7 +2657,7 @@ function 前回の支度(){
     if(sp.キー&&sp.丸め&&sp.丸め[0]!=null&&桁[sp.キー]==null)桁[sp.キー]=sp.丸め[0];
     if(sp.種==="前回差"&&sp.導出キー&&sp.キー)前回差[sp.導出キー]={元:sp.キー,係数:sp.係数||1,桁:sp.丸め?sp.丸め[1]:null,空白:!!sp.空白};
   }
-  前回={原,桁,前回差,足した:[],無い:[],試し:null,予約:null};
+  前回={原,桁,前回差,足した:[],無い:[],休み:[],試し:null,予約:null};
 }
 function 控えのキー(m){return "tenken:"+ST.ID+":回:"+回の部屋(m);}
 function 控えを読む(m){try{return JSON.parse(localStorage.getItem(控えのキー(m))||"null");}catch(e){return null;}}
@@ -2563,23 +2743,28 @@ function 既定を合わせる(){
 function 前回を組み直す(){
   前回の支度();
   if(試しモード&&!前回.試し)return;
-  const 前に足した=前回.足した.length>0;
+  const 前に足した=前回.足した.length>0||前回.休み.length>0;
   /* Excel のときの姿に戻す（足した行を外し、前回値を元に） */
   const 原=前回.原;
   for(const k in HKEY)if(原.長さ[k]!=null)HKEY[k].length=原.長さ[k];
   if(ST.履歴&&ST.履歴.回)ST.履歴.回.length=原.回長;
   HIST.length=原.HIST長;
   ITEMS.forEach(it=>(it.all||it.f).forEach(f=>{f.prev=原.prev[it.id+"."+f.id];}));
-  前回.足した=[];前回.無い=[];
+  前回.足した=[];前回.無い=[];前回.休み=[];
   const E=ST.履歴&&ST.履歴.今回,N=parseInt(String(info.no||"").trim(),10);
   if(typeof E==="number"&&N>E+1){
     for(let m=E+1;m<N;m++){
       const rf=回の値(m);
-      if(!rf){前回.無い.push(m);continue;}
+      if(!rf){
+        /* 冷凍機（回は暦の日）：記録の無い日は点検しない日（土日・祝日）。Excel と同じく積算時間だけ前の日の値を写した行を足す */
+        if(ST.日割){行を足す(m,休みの行(m));前回.休み.push(m);continue;}
+        前回.無い.push(m);continue;
+      }
       行を足す(m,行を作る(rf));前回.足した.push(m);
     }
   }
-  if(前に足した||前回.足した.length)既定を合わせる();
+  if(ST.日割)日割の前回値();
+  if(前に足した||前回.足した.length||前回.休み.length)既定を合わせる();
   前回の札();
 }
 /* 一覧の上に「前回値はどの回の記録か」を出す（Excel の今回＋1 を点検しているときは出さない） */
@@ -2589,11 +2774,17 @@ function 前回の札(){
   const E=ST.履歴&&ST.履歴.今回,N=parseInt(String(info.no||"").trim(),10);
   if(試しモード||typeof E!=="number"||!(N>E+1)){b.style.display="none";return;}
   b.style.display="";
-  const 最後=前回.足した.length?前回.足した[前回.足した.length-1]:E,h=HIST[HIST.length-1];
+  const 最後=前回.足した.length?前回.足した[前回.足した.length-1]:E;
+  const h=HIST.slice().reverse().find(r=>r&&r.no===最後)||HIST[HIST.length-1];
   if(前回.無い.length){
     b.classList.add("warn");
     b.textContent="No."+前回.無い.join("・")+" の記録が見つかりません。前回値は No."+最後+" のものです"+(合言葉()?"":"（相方と共有していると中継から取れます）");
-  }else{b.classList.remove("warn");b.textContent="前回値：No."+最後+(h&&h.d?"（"+h.d+"）の記録から":" の記録から");}
+  }else{
+    b.classList.remove("warn");
+    /* 冷凍機：最後の点検の後の、点検しない日（土日・祝日）の数。紙の前日読みは最後の点検の値、前回運転時間は 0 になる */
+    const 休=前回.休み.filter(m=>m>最後).length;
+    b.textContent="前回値：No."+最後+(h&&h.d?"（"+h.d+"）の記録から":" の記録から")+(休?"。その後の"+休+"日は点検なしの日です":"");
+  }
 }
 /* 中継から前の回の値を取って端末に控える。変わっていれば作り直す */
 async function 前回を取りに行く(){
@@ -2628,7 +2819,9 @@ function 今日(){const d=new Date(),p=n=>String(n).padStart(2,"0");return d.get
 async function 次の回へ(){
   const N=parseInt(String(info.no||"").trim(),10);
   if(!(N>0)){alert("点検表 No. を入れてください。");return;}
-  if(!confirm("No."+N+" を終えて、No."+(N+1)+" を始めます。\n\n入力した値はこの画面から消え、No."+N+" の値が次の回の「前回」になります。"+
+  /* 冷凍機（回は暦の日）：次の回は「明日」か、今日のほうが先なら今日（金曜に終えたまま月曜に開いたときは、開いたときに今日へ合わせ直す） */
+  const 次=ST.日割?Math.max(N+1,日割の回(今日())||0):N+1;
+  if(!confirm("No."+N+" を終えて、No."+次+" を始めます。\n\n入力した値はこの画面から消え、No."+N+" の値が次の回の「前回」になります。"+
     (合言葉()?"\n（相方の入力も含めて中継に残っています）":"")))return;
   const c=控えを読む(N)||{},f={};
   ITEMS.forEach(it=>(it.all||it.f).forEach(x=>{const k=it.id+"."+x.id;if(val[k]!==undefined&&val[k]!==null)f[k]=String(val[k]);}));
@@ -2637,22 +2830,77 @@ async function 次の回へ(){
   if(共有する())await Promise.race([sync(),new Promise(r=>setTimeout(r,5000))]);
   for(const o of [val,meta,stat])for(const k of Object.keys(o))delete o[k];
   const rm=ITEMS.find(x=>x.id==="rm");if(rm&&rm.all)rm.f=rm.all.slice(0,2);
-  info.no=String(N+1);info.date=今日();
+  info.no=String(次);info.date=(ST.日割&&日割の日(次))||今日();
   saveLocal();
   location.reload();
 }
-/* 試し：?架空=B&前回架空=A（No.「今回＋1」は架空値 A だったことにする） */
+/* 試し：?架空=B&前回架空=A（No.「今回＋1」は架空値 A だったことにする）。
+   &間=K（冷凍機）… そのあと K 日は記録の無い日（点検しない日）にして、No.「今回＋2＋K」を架空値 B で開く（架空書き込み.js --間=K と突き合わせる） */
 function 前回の架空を入れる(){
-  let A=0;try{A=+(new URLSearchParams(location.search).get("前回架空")||0)||0;}catch(e){}
+  let A=0,K=0;try{const q=new URLSearchParams(location.search);A=+(q.get("前回架空")||0)||0;K=Math.max(0,+(q.get("間")||0)||0);}catch(e){}
   if(!A||typeof ST.履歴.今回!=="number")return;
   const E=ST.履歴.今回,k=架空値.作る(ST,A),rf={};
   for(const sk of Object.keys(k.値)){const ak=ST.逆引き[sk];if(ak)rf[ak]=String(k.値[sk]);}
   rf["@点検日"]=k.日付;rf["@時刻"]=k.時刻;
-  前回の支度();前回.試し={[E+1]:rf};前回.試しNo=E+2;
-  info.no=String(E+2);
+  前回の支度();前回.試し={[E+1]:rf};前回.試しNo=E+2+K;
+  info.no=String(E+2+K);
   前回を組み直す();
 }
-if(!試しモード)setTimeout(()=>{前回を組み直す();draw();前回を取りに行く();},0);   /* 起動（保存の読み込み・No. の初期値）が済んでから */
+
+/* ============ 冷凍機：回は暦の日（ST.日割。アプリ定義.js の 冷凍機の日割） ============
+   No.1 は ST.日割.一 の日（Excel の日付の連番）、No.ST.日割.終 まで。点検日を変えれば No. が、No. を変えれば点検日が付いてくる（点検情報の画面）。
+   蓄積シートは毎日1行で、点検しない日（土日・祝日）は積算時間の欄だけ前の日の値が写してある。アプリも記録の無い日をその行にする（休みの行）。
+   月曜の現場用は、前日読み＝日曜の行（＝金曜の値）、前回運転時間・前日の時刻・前回の冷凍機運転時間＝日曜の行（空なので 0）。 */
+function 日割の回(ds){
+  const D=ST.日割,s=D?日連番(ds):null;if(s==null)return null;
+  const n=s-D.一+1;return n>=1&&n<=D.終?n:null;
+}
+function 日割の日(n){
+  const D=ST.日割;if(!D||!(n>=1&&n<=D.終))return null;
+  const d=new Date(Date.UTC(1899,11,30)+(D.一+n-1)*86400000),p=x=>String(x).padStart(2,"0");
+  return d.getUTCFullYear()+"-"+p(d.getUTCMonth()+1)+"-"+p(d.getUTCDate());
+}
+/* 点検しない日の行：積算時間の欄（ST.日割.写す）は前の日の値、ほかの入力は空、日付はその日、時刻は空 */
+function 休みの行(m){
+  const 写=new Set(ST.日割.写す||[]),rf={"@点検日":日割の日(m)||""};
+  ITEMS.forEach(it=>(it.all||it.f).forEach(f=>{if(f.k&&写.has(f.k)&&f.prev!=null&&f.prev!=="")rf[it.id+"."+f.id]=String(f.prev);}));
+  const 行=行を作る(rf);
+  if(ST.点検情報&&ST.点検情報.時)行[ST.点検情報.時]=null;
+  ITEMS.forEach(it=>(it.all||it.f).forEach(f=>{if(f.k&&f.t==="time")行[f.k]=null;}));
+  return 行;
+}
+/* カードの「前回」・「前回通り」は、点検した最後の日の値にする（月曜に日曜の空の行を出さない）。
+   ただし印刷が前の日の行をそのまま引く欄（積算時間・前回の冷凍機運転時間など：差込の 前回値・差）は前の日の行のまま（Excel と同じ 0 を刷る） */
+function 日割の前回値(){
+  const 写=new Set(ST.日割.写す||[]),印刷=new Set();
+  for(const sp of Object.values(ST.差込||{}))if(sp.キー&&(sp.種==="前回値"||sp.種==="差"))印刷.add(sp.キー);
+  ITEMS.forEach(it=>(it.all||it.f).forEach(f=>{
+    if(!f.k||写.has(f.k)||印刷.has(f.k)||f.t==="text"||f.t==="volt"||f.t==="date"||f.t==="time")return;
+    if(f.prev!=null&&f.prev!=="")return;
+    const a=HKEY[f.k];if(!a)return;
+    for(let i=a.length-1;i>=0;i--)if(a[i]!=null&&a[i]!==""){f.prev=a[i];break;}
+  }));
+}
+/* 今の回に自分で値を入れたか（点検日・時刻と、触っていない既定は数えない） */
+function 今の回に入力がある(){
+  const r=部屋();
+  return Object.keys(meta).some(k=>!(k in 情報キー)&&meta[k]&&meta[k].r===r);
+}
+/* 開いたとき：今の回にまだ何も入れていなければ今日の回にする（金曜に「次の回を始める」で土曜へ進めて、月曜に開いたときなど）。
+   今日の分がもう済んでいれば（Excel にある・この端末で「次の回を始める」を押した）その次の日。値を入れていれば点検日に No. を合わせるだけ */
+function 日割を合わせる(){
+  if(!ST.日割||試しモード)return;
+  const E=ST.履歴&&ST.履歴.今回;
+  if(!今の回に入力がある()){
+    let n=日割の回(今日());
+    if(n&&typeof E==="number"&&n<=E)n=E+1;
+    while(n&&n<ST.日割.終&&控えを読む(n))n++;
+    const d=n?日割の日(n):null;
+    if(d){info.no=String(n);info.date=d;saveLocal();return;}
+  }
+  const n=日割の回(info.date);if(n)info.no=String(n);
+}
+if(!試しモード)setTimeout(()=>{日割を合わせる();前回を組み直す();draw();前回を取りに行く();},0);   /* 起動（保存の読み込み・No. の初期値）が済んでから */
 
 /* ============ 出力 ============ */
 const g=k=>val[k]!==undefined?val[k]:"";
@@ -2888,12 +3136,14 @@ function 式を解く(式,get){
   const peek=()=>tok[p],take=()=>tok[p++];
   const isOp=(t,...os)=>!!t&&t.o!==undefined&&os.includes(t.o);
   function 比較(){let v=連結();while(isOp(peek(),"=","<>","<",">","<=",">=")){const o=take().o;const w=連結();v=cmp(v,w,o);}return v;}
-  function 連結(){let v=加減();while(isOp(peek(),"&")){take();const w=加減();if(err(v))return v;if(err(w))return w;v=str(v)+str(w);}return v;}
-  function 加減(){let v=乗除();while(isOp(peek(),"+","-")){const o=take().o;const w=乗除();const a=num(v),b=num(w);if(err(a))return a;if(err(b))return b;v=o==="+"?a+b:a-b;}return v;}
-  function 乗除(){let v=冪();while(isOp(peek(),"*","/")){const o=take().o;const w=冪();const a=num(v),b=num(w);if(err(a))return a;if(err(b))return b;if(o==="/"&&b===0)return E("#DIV/0!");v=o==="*"?a*b:a/b;}return v;}
-  function 冪(){let v=単項();while(isOp(peek(),"^")){take();const w=単項();const a=num(v),b=num(w);if(err(a))return a;if(err(b))return b;v=Math.pow(a,b);}return v;}
+  /* エラーになっても残りの字は読み進める（途中で戻ると「括弧が閉じない」になる。IF は両方の枝を計算するので、選ばれない枝の
+     「""*X8*4.186」のような計算でここを通る。2026-10-19 冷凍機の空欄の試しで発覚） */
+  function 連結(){let v=加減();while(isOp(peek(),"&")){take();const w=加減();if(err(v))continue;if(err(w)){v=w;continue;}v=str(v)+str(w);}return v;}
+  function 加減(){let v=乗除();while(isOp(peek(),"+","-")){const o=take().o;const w=乗除();const a=num(v),b=num(w);if(err(a)){v=a;continue;}if(err(b)){v=b;continue;}v=o==="+"?a+b:a-b;}return v;}
+  function 乗除(){let v=冪();while(isOp(peek(),"*","/")){const o=take().o;const w=冪();const a=num(v),b=num(w);if(err(a)){v=a;continue;}if(err(b)){v=b;continue;}if(o==="/"&&b===0){v=E("#DIV/0!");continue;}v=o==="*"?a*b:a/b;}return v;}
+  function 冪(){let v=単項();while(isOp(peek(),"^")){take();const w=単項();const a=num(v),b=num(w);if(err(a)){v=a;continue;}if(err(b)){v=b;continue;}v=Math.pow(a,b);}return v;}
   function 単項(){const t=peek();if(isOp(t,"-")){take();const v=num(単項());return err(v)?v:-v;}if(isOp(t,"+")){take();return 単項();}return 後置();}
-  function 後置(){let v=因子();while(isOp(peek(),"%")){take();const a=num(v);if(err(a))return a;v=a/100;}return v;}
+  function 後置(){let v=因子();while(isOp(peek(),"%")){take();const a=num(v);if(err(a)){v=a;continue;}v=a/100;}return v;}
   function 因子(){
     const t=take();if(!t)throw new Error("式が途中で終わる: "+式);
     if(t.n!==undefined)return t.n;if(t.s!==undefined)return t.s;if(t.b!==undefined)return t.b;
@@ -3054,7 +3304,7 @@ function 総括PDFを保存(){
 function openSummary(){
   const frag=document.createDocumentFragment();
   const head=el("div","phead",
-    '<div class="sym">総括</div><div class="nm">'+(ST.名||'')+'／交通局へ出す様式のまま／A4横'+ST.総括.頁.length+'ページ</div>');
+    '<div class="sym">総括</div><div class="nm">'+(ST.名||'')+'／交通局へ出す様式のまま／'+紙の名(ST)+ST.総括.頁.length+'ページ</div>');
   const 手=el("span","prbtns");
   const pr=el("button","prbtn",iOS端末()?"印刷（PDF）":"印刷");pr.type="button";
   pr.onclick=()=>{if(iOS端末())総括PDFを開く();else window.print();};手.appendChild(pr);
@@ -3081,18 +3331,19 @@ function openSummary(){
   if(!missing.length&&!uniq.length)body.insertAdjacentHTML("beforeend",
     '<div class="repok">未入力なし。基準値・前回比の警告もありません。</div>');
   body.insertAdjacentHTML("beforeend",
-    '<div class="swipe2">帳票を横になぞると右側（冷媒圧力・積算電力量・備考）が見られます。'+
+    '<div class="swipe2">帳票を横になぞると右側'+(ST.一人?'も':'（冷媒圧力・積算電力量・備考）が')+'見られます。'+
     '薄い色は未入力・注意の印で、画面だけのものです。印刷にも提出物にも出ません。</div>');
 
   /* --- 帳票 --- */
   body.insertAdjacentHTML("beforeend",
-    ST.総括.頁.map(()=>'<div class="shwrap"><div class="svsheet"><svg class="xlsvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 296.9 209.9" width="296.9mm" height="209.9mm"></svg></div></div>').join(''));
+    ST.総括.頁.map(p=>{const a=紙の向き横A4(p),w=a?'296.9':p.幅.toFixed(1),h=a?'209.9':p.高さ.toFixed(1);return '<div class="shwrap"><div class="svsheet"><svg class="xlsvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+w+' '+h+'" width="'+w+'mm" height="'+h+'mm"></svg></div></div>';}).join(''));
   fillSheet(body);
   body.insertAdjacentHTML("beforeend",
     '<div class="repnote">Excelが刷った総括（罫線・塗り・見出しの字）をそのまま下絵にし、入力した値をExcelと同じ規則（字の大きさ・寄せ・表示形式・####・縮小・条件付き書式）で置いています'+
-    '（A4横'+ST.総括.頁.length+'ページ）。'+
+    '（'+紙の名(ST)+ST.総括.頁.length+'ページ）。'+
+    (ST.日割?'運転時間は「本日読み − 前日読み」。点検しない日（土日・祝日）は Excel と同じく、積算時間を前の日の値のまま写した日として数えます。':
     '定格は総括シートF列の値（入力画面の基準値とは別の数字）。'+
-    '運転時間は「今回の積算時間 − 前回の積算時間」、使用量は「今回の読み値 − 前回の読み値」。</div>');
+    '運転時間は「今回の積算時間 − 前回の積算時間」、使用量は「今回の読み値 − 前回の読み値」。')+'</div>');
   frag.appendChild(body);
 
   const foot=el("div","pfoot");

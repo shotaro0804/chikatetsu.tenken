@@ -959,7 +959,9 @@ const 字幅表={"MS-Mincho":{"設計":[[32,126,128],[160,166,128],[167,168,256]
     const Us = em => sp.bx - 2 * 余白(em) + 1;
     let { gl, W } = 並べる(部品, 幅, sp.f, sp.e, 太);
     if (W <= Us(sp.e)) return { em: sp.e, gl, W, y: sp.y };
-    const q = sp.s.t0 * Us(sp.e) / W;
+    /* 見積もりの幅は「入るか」の幅より 2 画素せまい（天神熱源の M11〜M16 の負の数「-39,630.5 」が Excel では 45、+1 のままだと 46。
+       全冊の架空 PDF の縮小の欄 192 か所で、この形だけが全部合う。2026-10-20） */
+    const q = sp.s.t0 * (Us(sp.e) - 2) / W;
     let em = Math.min(sp.e, Math.floor(Math.floor(q) * sp.s.k + 1e-9));
     while (em > 1 && 並べる(部品, 幅, sp.f, em, 太).W > Us(em)) em--;
     ({ gl, W } = 並べる(部品, 幅, sp.f, em, 太));
@@ -3071,9 +3073,11 @@ function 生値(c){
     case"時刻":{const ak=sp.キー&&ST.逆引き[sp.キー];const v=ak?val[ak]:null;return 時連番(v?String(v):info.time);}
     /* 前回日・前回時は、その欄が見ている日付・時刻のスロットの履歴から（駅によって日付の欄が複数ある） */
     /* 前回の行が空なら Excel の INDEX は 0 を返し、日付の書式で「1/0」と刷る。同じにする */
-    case"前回日":{const h=履歴の値(sp.キー||(ST.点検情報&&ST.点検情報.日),1);return h===null?0:h;}
-    case"前回時":{const h=履歴の値(sp.キー||(ST.点検情報&&ST.点検情報.時),1);return h===null?0:h;}
+    /* IF(x="","",x) の写しを引く欄（sp.空白。天神熱源の K3：補機類積算時間!E は 電流・圧力!E の写し）は、前の行が空なら Excel と同じく空文字（0:00 にしない） */
+    case"前回日":{const h=履歴の値(sp.キー||(ST.点検情報&&ST.点検情報.日),1);return h===null?(sp.空白?"":0):h;}
+    case"前回時":{const h=履歴の値(sp.キー||(ST.点検情報&&ST.点検情報.時),1);return h===null?(sp.空白?"":0):h;}
     case"定数":return sp.値;                                       /* 蓄積シートの次の行に直書きされた値（水道メーターの AG28） */
+    case"点検者":{const s=String(info.whoA||"").trim();return s===""?(sp.空白?"":null):s;}   /* 現場用の点検者の欄（福岡空港）：点検情報の点検者（自分）。転記でも同じ名前を点検者の列に書く */
     case"備考":{const v=val[XLKEY(sp.キー)];const s=v==null?"":String(v).trim();return s===""?null:s;}   /* 空の備考は空白1つを転記する慣わし＝何も出ない */
     case"選択":{const v=val[XLKEY(sp.キー)];const s=v==null?"":String(v).trim();return s===""?0:s;}      /* 未選択は Excel の INDEX と同じく 0 */
     case"差":{
@@ -3089,8 +3093,8 @@ function 生値(c){
       if(sp.導出キー){const d=履歴の値(sp.導出キー,1);if(typeof d==="number")return d;}
       const a=HKEY[sp.キー];if(!a)return null;const v=a.filter(x=>typeof x==="number");return v.length>=2?桁丸め((v[v.length-1]-v[v.length-2])*(sp.係数||1),丸[1]):null;}
     case"前回値":{const ak=ST.逆引き&&ST.逆引き[sp.キー];const f=ak?fieldByKey(ak):null;
-      if(f)return f.prev!=null&&f.prev!==""?桁丸め(桁丸め(f.prev,丸[0]),丸[1]):(f.t==="text"?null:0);   /* 前回の行が空なら Excel と同じ 0（字の欄は空白1つ） */
-      const h=履歴の値(sp.キー,1);return h===null?0:h;}                 /* 入力欄でない列（式の欄の前回など）は履歴から */
+      if(f)return f.prev!=null&&f.prev!==""?桁丸め(桁丸め(f.prev,丸[0]),丸[1]):(f.t==="text"?null:(sp.空白?"":0));   /* 前回の行が空なら Excel と同じ 0（字の欄は空白1つ。IF(x="","",x) の写しは空文字：天神熱源の N4） */
+      const h=履歴の値(sp.キー,1);return h===null?(sp.空白?"":0):h;}                 /* 入力欄でない列（式の欄の前回など）は履歴から */
     case"式":{const v=スロット値(sp.キー,0);return v===undefined?null:(typeof v==="boolean"?(v?"TRUE":"FALSE"):v);}   /* 式の空文字はそのまま（Excel と同じ） */
     default:{
       /* 入力が空なら Excel の INDEX と同じく 0（IF で守られた写しの欄は空文字、字の欄は空白1つの慣わし＝何も出ない） */
